@@ -30,10 +30,7 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":{
-    "name":"spr_arc_long",
-    "path":"sprites/spr_arc_long/spr_arc_long.yy",
-  },
+  "spriteId":null,
   "spriteMaskId":null,
   "visible":true,
 }

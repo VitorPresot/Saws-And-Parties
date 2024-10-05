@@ -1,139 +1,134 @@
-/// @description Tower
-
-
-// Set depth based on its y value
+// Define a profundidade com base na posição y
 depth = -y;
 
-// Set the distance calculation a bit up from the base of the sprite
-var _target_y = y - 39
+// Define o cálculo da distância um pouco acima da base do sprite
+var _target_y = y - 39;
 
 /*
-	This section finds the target that is
-	farthest along the path (i.e. closest to village)
+    Esta seção encontra o alvo mais distante
+    no caminho (ou seja, mais próximo da vila)
 */
 
-// Declare the temporary variables 
+// Declarar variáveis temporárias
 var _farthest, _farthest_val;
 
-// This variable stores the id of the next correct enemy to target
+// Esta variável armazena a id do próximo inimigo correto a ser alvo
 _farthest = noone;
 
-// This variable stores the distance to the farthest enemy, defaulted to 0
+// Esta variável armazena a distância para o inimigo mais distante, começando em 0
 _farthest_val = 0;
 
-// Loop through all current enemies
+// Loop por todos os inimigos atuais
 with (obj_enemy_parent) 
 {
-	// Create a value based off the ellipse position and the position of the enemy for ellipse equation
-	// thats is used to check if the distance x squared divided by the x range squared 
-	// plus the distance y squared divided by the range y squared is less than 1
-	var _check_ellipse_collision = (sqr(x - other.x)/sqr(other.range)) + (sqr(y - _target_y)/sqr(other.range * 0.75));
-	
-	// Performs the check to see if the enemy is in range based on the calculated value
-	if (_check_ellipse_collision < 1)
-	{
-		// Check to see if either this is the first enemy (_farthest == noone) or
-		// its farther along the path than the last closest enemy (path_position > _farthest_val)
-		if (_farthest == noone) || (path_position > _farthest_val) 
-		{		
-			// If it is, save its id as _farthest so that it can be compared to the next enemy
-			_farthest = id;
-		
-			// Save its distance as _farthest_val value so that it can be compared to the next enemy
-			_farthest_val = path_position;
-		}
-	}
+    // Valor da equação da elipse para checar a colisão com o range do ataque
+    var _check_ellipse_collision = (sqr(x - other.x)/sqr(other.range)) + (sqr(y - _target_y)/sqr(other.range * 0.75));
+    
+    // Checa se o inimigo está no range com base no valor calculado
+    if (_check_ellipse_collision < 1)
+    {
+        // Verifica se este é o primeiro inimigo ou se está mais adiante no caminho
+        if (_farthest == noone || path_position > _farthest_val) 
+        {        
+            // Salva a id como o inimigo mais distante
+            _farthest = id;
+        
+            // Salva a distância para comparação com o próximo inimigo
+            _farthest_val = path_position;
+        }
+    }
 }
 
-
 /*
-	This section will use the id of the farthest enemy (i.e. closest to village)
-	and fire at it, if the tower is ready to fire.
+    Esta seção usará a id do inimigo mais distante
+    e disparará nele, se a torre estiver pronta para atirar.
 */
 
-// See if we found an enemy to target (_farthest will contain an instanc id
-// if there was a viable target) and check if we are ready to fire
-if (_farthest != noone) && (ready_to_fire)
+// Verifica se encontramos um inimigo para mirar e se estamos prontos para atirar
+if (_farthest != noone && ready_to_fire)
 {
+    // Começa o carregamento
+    power_level += power_charge;
 
-	// Start charging up
-	power_level += power_charge;
-
-	// Once the tower is charged, it is ready to fire
-	if (power_level >= 1) 
-	{
-		// Deal damage immedaitely
-		deal_damage(_farthest, 2);
-		
-		// Reset power level to 0
-		power_level = 0;
-		
-		// Set ready to fire to false so the tower can't fire again right away
-		ready_to_fire = false;
-		
-		// Set alarm zero to the fire_delay
-		alarm[0] = fire_delay;
-		
-		// Create a new layer just above this one
-		var _layer = layer_create(depth - 1);
-		
-		// Create the fire fade sequence
-		layer_sequence_create(_layer, x, y, seq_arc_fire_fade);
-		
-		// Get the direction to the enemy (offsetting the y value)
-		// so that it doesn't spawn and target the bottom of the sprites
-		var _dir = point_direction(x, y - 122, _farthest.x, _farthest.y - 125);	
-		
-		// Create the arc fire sequence and save it's id
-		var _seq = layer_sequence_create(_layer, x, y - 122, seq_arc_fire);
-		
-		// Set the sequence's angle using the id and direction we just calculated
-		layer_sequence_angle(_seq, _dir);
-		
-		// Create a new instance of the arc and use with to access its variables 
-		with (instance_create_depth(x, y - 134, depth, obj_arc_new)) 
-		{
-			// Set the target id to the id of the enemy we're targeting
-			target = _farthest;
-			
-			// Push that id onto the targets_hit_array so it can't be targeted again
-			array_push(targets_hit_array, target);
-			
-			// Set the amount of chains remaining to the amount of chains remaining of the arc that created it
-			chains_remaining = other.chain_amount;
-			
-			// Set the target's x, y, and depth
-			target_x = target.x;
-			target_y = target.y;
-			target_depth = target.depth;
-			
-			// Have this new arc point towards its target
-			image_angle = point_direction(x, y, target_x, target_y - 125);
-			
-			// Scale the arc by how close it is to its target
-			image_xscale = point_distance(x, y, target_x, target_y - 125) / sprite_get_width(sprite_index);
-			
-			// Create a new instance of the arc and use with to access its variables 
-			with (instance_create_depth(_farthest.x, _farthest.y - 125, _farthest.depth - 15, obj_arc_hit))
-			{
-				// Set the image's x scale to face right or left
-				image_xscale = ((_dir > 90) && (_dir < 270)) ? -1 : 1;
-			}
-			
-		}
-
-
-	}
-		
+    // Quando a torre estiver carregada, ela estará pronta para atirar
+    if (power_level >= 1) 
+    {
+        // Causa dano imediatamente
+        deal_damage(_farthest, 2);
+        
+        // Reseta o nível de poder
+        power_level = 0;
+        
+        // Define ready_to_fire como falso para evitar disparos consecutivos
+        ready_to_fire = false;
+        
+        // Define o alarme para o tempo de espera de disparo
+        alarm[0] = fire_delay;
+        
+        // Cria uma nova camada logo acima da atual
+        var _layer = layer_create(depth - 1);
+        
+        // Cria a sequência de fade do tiro
+        layer_sequence_create(_layer, x, y, seq_arc_fire_fade);
+        
+        // Calcula a direção do inimigo, ajustando o valor de y
+        var _dir = point_direction(x, y - 122, _farthest.x, _farthest.y - 125);    
+        
+        // Cria a sequência de tiro e salva a id da sequência
+        var _seq = layer_sequence_create(_layer, x, y - 122, seq_arc_fire);
+        
+        // Define o ângulo da sequência de acordo com a direção calculada
+        layer_sequence_angle(_seq, _dir);
+        
+        // Cria uma nova instância do arco e usa "with" para acessar suas variáveis
+        with (instance_create_depth(x, y - 134, depth, obj_arc_new)) 
+        {
+            // Define o alvo como o inimigo mais distante
+            target = _farthest;
+            
+            // Adiciona a id do inimigo ao array para que não seja atingido novamente
+            array_push(targets_hit_array, target);
+            
+            // Define a quantidade de encadeamentos restantes com base no arco que o criou
+            chains_remaining = other.chain_amount;
+            
+            // Define as coordenadas e profundidade do alvo
+            target_x = target.x;
+            target_y = target.y;
+            target_depth = target.depth;
+            
+            // Faz o arco apontar para o alvo
+            image_angle = point_direction(x, y, target_x, target_y - 125);
+            
+            // Ajusta a escala do arco com base na distância até o alvo
+            image_xscale = point_distance(x, y, target_x, target_y - 125) / sprite_get_width(sprite_index);
+            
+            // Cria uma nova instância do arco de impacto e define sua escala
+            with (instance_create_depth(_farthest.x, _farthest.y - 125, _farthest.depth - 15, obj_arc_hit))
+            {
+                // Define a escala para o lado correto (direita/esquerda)
+                image_xscale = ((_dir > 90) && (_dir < 270)) ? -1 : 1;
+            }
+        }
+    }
 } 
-// If there's no target or we're not ready to fire
 else 
 {
-	// Power down
-	power_level -= power_charge;
-} 
+    // Reduz o nível de poder se não houver alvo ou não estiver pronto para disparar
+    power_level -= power_charge;
+}
 
-// Clamp the power level between 0 and 1
+// Mantém o nível de poder entre 0 e 1
 power_level = clamp(power_level, 0, 1);
 
+// *** NOVA LÓGICA PARA INVERTER IMAGEM ***
 
+// Se o objeto está no lado negativo do eixo x, inverta a imagem
+if (x < 0) 
+{
+    image_xscale = -abs(image_xscale);  // Inverte a imagem se o x for negativo
+}
+else 
+{
+    image_xscale = abs(image_xscale);   // Mantém a imagem normal se o x for positivo
+}
