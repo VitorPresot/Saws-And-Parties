@@ -1,7 +1,7 @@
 /// @description Movimentação do personagem e controle de sprites
 
 // Movimentação
-if keyboard_check(vk_up) {
+if keyboard_check(vk_up){
     y -= 1;
 }
 
