@@ -1,0 +1,51 @@
+{
+  "$GMProject":"",
+  "%Name":"Meu primeiro jogo",
+  "AudioGroups":[
+    {"$GMAudioGroup":"","%Name":"audiogroup_default","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
+  ],
+  "configs":{
+    "children":[],
+    "name":"Default",
+  },
+  "defaultScriptType":1,
+  "Folders":[
+    {"$GMFolder":"","%Name":"Cenas","folderPath":"folders/Cenas.yy","name":"Cenas","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"Objetos","folderPath":"folders/Objetos.yy","name":"Objetos","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"Sprites","folderPath":"folders/Sprites.yy","name":"Sprites","resourceType":"GMFolder","resourceVersion":"2.0",},
+  ],
+  "IncludedFiles":[],
+  "isEcma":false,
+  "LibraryEmitters":[],
+  "MetaData":{
+    "IDEVersion":"2024.1100.0.626",
+  },
+  "name":"Meu primeiro jogo",
+  "resources":[
+    {"id":{"name":"Obj_menu","path":"objects/Obj_menu/Obj_menu.yy",},},
+    {"id":{"name":"oMoeda","path":"objects/oMoeda/oMoeda.yy",},},
+    {"id":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},},
+    {"id":{"name":"oSerrote","path":"objects/oSerrote/oSerrote.yy",},},
+    {"id":{"name":"oSerroteMove","path":"objects/oSerroteMove/oSerroteMove.yy",},},
+    {"id":{"name":"menu","path":"rooms/menu/menu.yy",},},
+    {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
+    {"id":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},
+    {"id":{"name":"sFundo","path":"sprites/sFundo/sFundo.yy",},},
+    {"id":{"name":"sMoeda","path":"sprites/sMoeda/sMoeda.yy",},},
+    {"id":{"name":"sPersonagem","path":"sprites/sPersonagem/sPersonagem.yy",},},
+    {"id":{"name":"sPersonagemCorre","path":"sprites/sPersonagemCorre/sPersonagemCorre.yy",},},
+    {"id":{"name":"Sprite6","path":"sprites/Sprite6/Sprite6.yy",},},
+    {"id":{"name":"sSerrote","path":"sprites/sSerrote/sSerrote.yy",},},
+  ],
+  "resourceType":"GMProject",
+  "resourceVersion":"2.0",
+  "RoomOrderNodes":[
+    {"roomId":{"name":"menu","path":"rooms/menu/menu.yy",},},
+    {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
+    {"roomId":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},
+  ],
+  "templateType":"game",
+  "TextureGroups":[
+    {"$GMTextureGroup":"","%Name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","customOptions":"","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"name":"Default","resourceType":"GMTextureGroup","resourceVersion":"2.0","targets":-1,},
+  ],
+}
