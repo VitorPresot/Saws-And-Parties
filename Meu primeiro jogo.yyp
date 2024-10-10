@@ -18,7 +18,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.8.1.171",
+    "IDEVersion":"2024.1100.0.626",
   },
   "name":"Meu primeiro jogo",
   "resources":[
@@ -32,6 +32,7 @@
     {"id":{"name":"sMoeda","path":"sprites/sMoeda/sMoeda.yy",},},
     {"id":{"name":"sPersonagem","path":"sprites/sPersonagem/sPersonagem.yy",},},
     {"id":{"name":"sPersonagemCorre","path":"sprites/sPersonagemCorre/sPersonagemCorre.yy",},},
+    {"id":{"name":"Sprite6","path":"sprites/Sprite6/Sprite6.yy",},},
     {"id":{"name":"sSerrote","path":"sprites/sSerrote/sSerrote.yy",},},
   ],
   "resourceType":"GMProject",

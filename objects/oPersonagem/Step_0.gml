@@ -1,29 +1,32 @@
-/// @description Inserir descrição aqui
-// Você pode escrever seu código neste editor
-if keyboard_check(vk_up){
-	y-= 1 
+/// @description Movimentação do personagem e controle de sprites
+
+// Movimentação
+if keyboard_check(vk_up) {
+    y -= 1;
 }
 
-if keyboard_check(vk_down){
-	y+=1
+if keyboard_check(vk_down) {
+    y += 1;
 }
 
-if keyboard_check(vk_left){
-	x-=1 image_xscale = -1
-}
-if keyboard_check(vk_right){
-	x+=1 image_xscale = 1
+if keyboard_check(vk_left) {
+    x -= 1;
+    image_xscale = -1; // Inverter sprite ao ir para a esquerda
 }
 
+if keyboard_check(vk_right) {
+    x += 1;
+    image_xscale = 1;  // Manter sprite na direção original
+}
 
-if moeda = 12
-{
-	room_goto_next()
+// Mudar de sala ao pegar 12 moedas
+if moeda >= 12 {
+    room_goto_next();
 }
-if keyboard_check(vk_anykey)
-{
-	sprite_index=sPersonagemCorre
-}
-else{
-sprite_index = sPersonagem	
+
+// Verifica se alguma tecla de movimento está pressionada
+if keyboard_check(vk_up) || keyboard_check(vk_down) || keyboard_check(vk_left) || keyboard_check(vk_right) {
+    sprite_index = sPersonagemCorre; // Sprite de correr
+} else {
+    sprite_index = sPersonagem; // Sprite de parada
 }
