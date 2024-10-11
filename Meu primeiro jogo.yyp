@@ -26,8 +26,8 @@
     {"id":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},},
     {"id":{"name":"oSerrote","path":"objects/oSerrote/oSerrote.yy",},},
     {"id":{"name":"oSerroteMove","path":"objects/oSerroteMove/oSerroteMove.yy",},},
+    {"id":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
-    {"id":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},
     {"id":{"name":"sFundo","path":"sprites/sFundo/sFundo.yy",},},
     {"id":{"name":"sMoeda","path":"sprites/sMoeda/sMoeda.yy",},},
     {"id":{"name":"sPersonagem","path":"sprites/sPersonagem/sPersonagem.yy",},},
@@ -38,7 +38,7 @@
   "resourceVersion":"2.0",
   "RoomOrderNodes":[
     {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
-    {"roomId":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},
+    {"roomId":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
   ],
   "templateType":"game",
   "TextureGroups":[

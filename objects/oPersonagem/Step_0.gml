@@ -20,7 +20,7 @@ if keyboard_check(vk_right) {
 }
 
 // Mudar de sala ao pegar 12 moedas
-if moeda >= 12 {
+if moeda >= 16 {
     room_goto_next();
 }
 
