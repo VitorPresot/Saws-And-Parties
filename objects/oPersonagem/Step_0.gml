@@ -11,12 +11,12 @@ if keyboard_check(vk_down) {
 
 if keyboard_check(vk_left) {
     x -= 1;
-    image_xscale = -1; // Inverter sprite ao ir para a esquerda
+    image_xscale = -0.35; // Inverter sprite ao ir para a esquerda
 }
 
 if keyboard_check(vk_right) {
     x += 1;
-    image_xscale = 1;  // Manter sprite na direção original
+    image_xscale = 0.35;  // Manter sprite na direção original
 }
 
 // Mudar de sala ao pegar 12 moedas
