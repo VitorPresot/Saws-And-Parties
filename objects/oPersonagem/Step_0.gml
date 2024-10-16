@@ -30,6 +30,3 @@ if keyboard_check(vk_up) || keyboard_check(vk_down) || keyboard_check(vk_left) |
 } else {
     sprite_index = sPersonagem; // Sprite de parada
 }
-if global.life < 1 {
-game_restart();
-}
