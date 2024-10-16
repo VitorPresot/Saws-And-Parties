@@ -18,12 +18,13 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.8.1.171",
+    "IDEVersion":"2024.1100.0.634",
   },
   "name":"Meu primeiro jogo",
   "resources":[
     {"id":{"name":"ft_menu","path":"fonts/ft_menu/ft_menu.yy",},},
     {"id":{"name":"menuObj","path":"objects/menuObj/menuObj.yy",},},
+    {"id":{"name":"obj_pausa","path":"objects/obj_pausa/obj_pausa.yy",},},
     {"id":{"name":"oMoeda","path":"objects/oMoeda/oMoeda.yy",},},
     {"id":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},},
     {"id":{"name":"oSerrote","path":"objects/oSerrote/oSerrote.yy",},},
