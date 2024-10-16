@@ -9,7 +9,7 @@ if (global.jogo_pausado) {
 
     // Desenha o texto "Game Paused" no centro da tela
     draw_text(gui_width / 2, gui_height / 2, text);
-    
+ 
     draw_set_halign(fa_center);  // Centraliza o alinhamento horizontal
     draw_set_valign(fa_middle);  // Centraliza o alinhamento vertical
 }
