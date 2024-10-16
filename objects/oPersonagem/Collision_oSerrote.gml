@@ -1,5 +1,4 @@
 /// @description Inserir descrição aqui
 // Você pode escrever seu código neste editor
-
-global.life = 2;
-global.life = 1;
+instance_destroy()
+room_restart()

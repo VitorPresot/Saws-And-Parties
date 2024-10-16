@@ -1,5 +1,3 @@
 /// @description Inserir descrição aqui
 // Você pode escrever seu código neste editor
-
-global.life = -1;
-
+room_restart()
