@@ -1,6 +1,3 @@
-/// @description Insert description here
-// You can write your code in this editor
-mytime = 15;
+mytime = 15;  // Tempo inicial em segundos
 showTime = mytime;
-
 

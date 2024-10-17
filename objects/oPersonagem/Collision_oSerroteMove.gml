@@ -1,5 +1,2 @@
-/// @description Inserir descrição aqui
-// Você pode escrever seu código neste editor
-
-instance_destroy()
-room_restart()
+instance_destroy();
+room_goto(Menu);

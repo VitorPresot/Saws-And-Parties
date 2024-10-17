@@ -18,7 +18,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.8.1.171",
+    "IDEVersion":"2024.1100.0.634",
   },
   "name":"Meu primeiro jogo",
   "resources":[
@@ -27,11 +27,13 @@
     {"id":{"name":"menuObj","path":"objects/menuObj/menuObj.yy",},},
     {"id":{"name":"obj_pausa","path":"objects/obj_pausa/obj_pausa.yy",},},
     {"id":{"name":"obj_timer","path":"objects/obj_timer/obj_timer.yy",},},
+    {"id":{"name":"oGameOver","path":"objects/oGameOver/oGameOver.yy",},},
     {"id":{"name":"oMoeda","path":"objects/oMoeda/oMoeda.yy",},},
     {"id":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},},
     {"id":{"name":"oSerrote","path":"objects/oSerrote/oSerrote.yy",},},
     {"id":{"name":"oSerroteMove","path":"objects/oSerroteMove/oSerroteMove.yy",},},
     {"id":{"name":"Menu","path":"rooms/Menu/Menu.yy",},},
+    {"id":{"name":"rGameOver","path":"rooms/rGameOver/rGameOver.yy",},},
     {"id":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
     {"id":{"name":"sFundo","path":"sprites/sFundo/sFundo.yy",},},
@@ -46,6 +48,7 @@
     {"roomId":{"name":"Menu","path":"rooms/Menu/Menu.yy",},},
     {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
     {"roomId":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
+    {"roomId":{"name":"rGameOver","path":"rooms/rGameOver/rGameOver.yy",},},
   ],
   "templateType":"game",
   "TextureGroups":[

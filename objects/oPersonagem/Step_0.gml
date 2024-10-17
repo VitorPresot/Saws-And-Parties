@@ -2,24 +2,24 @@
 
 // Movimentação
 if keyboard_check(vk_up){
-    y -= 1;
+    y -= 1.2;
 }
 
 if keyboard_check(vk_down) {
-    y += 1;
+    y += 1.2;
 }
 
 if keyboard_check(vk_left) {
-    x -= 1;
+    x -= 1.2;
     image_xscale = -0.35; // Inverter sprite ao ir para a esquerda
 }
 
 if keyboard_check(vk_right) {
-    x += 1;
+    x += 1.2;
     image_xscale = 0.35;  // Manter sprite na direção original
 }
 
-// Mudar de sala ao pegar 12 moedas
+// Mudar de sala ao pegar 16 moedas
 if moeda >= 16 {
     room_goto_next();
 }
@@ -29,7 +29,4 @@ if keyboard_check(vk_up) || keyboard_check(vk_down) || keyboard_check(vk_left) |
     sprite_index = sPersonagemCorre; // Sprite de correr
 } else {
     sprite_index = sPersonagem; // Sprite de parada
-}
-if global.life < 1 {
-game_restart();
 }
