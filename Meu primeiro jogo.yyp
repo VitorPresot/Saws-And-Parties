@@ -27,6 +27,7 @@
     {"id":{"name":"menuObj","path":"objects/menuObj/menuObj.yy",},},
     {"id":{"name":"obj_pausa","path":"objects/obj_pausa/obj_pausa.yy",},},
     {"id":{"name":"obj_timer","path":"objects/obj_timer/obj_timer.yy",},},
+    {"id":{"name":"Object9","path":"objects/Object9/Object9.yy",},},
     {"id":{"name":"oGameOver","path":"objects/oGameOver/oGameOver.yy",},},
     {"id":{"name":"oMoeda","path":"objects/oMoeda/oMoeda.yy",},},
     {"id":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},},
