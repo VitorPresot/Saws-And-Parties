@@ -18,7 +18,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.1100.0.634",
+    "IDEVersion":"2024.8.1.171",
   },
   "name":"Meu primeiro jogo",
   "resources":[
@@ -36,10 +36,12 @@
     {"id":{"name":"rGameOver","path":"rooms/rGameOver/rGameOver.yy",},},
     {"id":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
+    {"id":{"name":"relogio","path":"sprites/relogio/relogio.yy",},},
     {"id":{"name":"sFundo","path":"sprites/sFundo/sFundo.yy",},},
     {"id":{"name":"sMoeda","path":"sprites/sMoeda/sMoeda.yy",},},
     {"id":{"name":"sPersonagem","path":"sprites/sPersonagem/sPersonagem.yy",},},
     {"id":{"name":"sPersonagemCorre","path":"sprites/sPersonagemCorre/sPersonagemCorre.yy",},},
+    {"id":{"name":"Sprite6","path":"sprites/Sprite6/Sprite6.yy",},},
     {"id":{"name":"sSerrote","path":"sprites/sSerrote/sSerrote.yy",},},
   ],
   "resourceType":"GMProject",
