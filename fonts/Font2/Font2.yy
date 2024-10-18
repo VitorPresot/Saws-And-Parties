@@ -239,8 +239,8 @@
   "maintainGms1Font":false,
   "name":"Font2",
   "parent":{
-    "name":"Meu primeiro jogo",
-    "path":"Meu primeiro jogo.yyp",
+    "name":"Fontes",
+    "path":"folders/Fontes.yy",
   },
   "pointRounding":0,
   "ranges":[

@@ -44,7 +44,7 @@ if x > room_width - sprite_width + 43 // O valor +20 diminui a "parede" da direi
 
 
 // Mudar de sala ao pegar 16 moedas
-if moeda >= 16 {
+if global.moeda >= 7 {
     room_goto_next();
 }
 

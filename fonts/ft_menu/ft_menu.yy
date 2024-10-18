@@ -1239,8 +1239,8 @@
   "maintainGms1Font":false,
   "name":"ft_menu",
   "parent":{
-    "name":"Meu primeiro jogo",
-    "path":"Meu primeiro jogo.yyp",
+    "name":"Fontes",
+    "path":"folders/Fontes.yy",
   },
   "pointRounding":0,
   "ranges":[
