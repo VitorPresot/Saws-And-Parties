@@ -41,7 +41,10 @@
     {"id":{"name":"Menu","path":"rooms/Menu/Menu.yy",},},
     {"id":{"name":"rGameOver","path":"rooms/rGameOver/rGameOver.yy",},},
     {"id":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
+    {"id":{"name":"Room1_2","path":"rooms/Room1_2/Room1_2.yy",},},
+    {"id":{"name":"Room1_3","path":"rooms/Room1_3/Room1_3.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
+    {"id":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},
     {"id":{"name":"musicaJogo","path":"sounds/musicaJogo/musicaJogo.yy",},},
     {"id":{"name":"somMoeda","path":"sounds/somMoeda/somMoeda.yy",},},
     {"id":{"name":"relogio","path":"sprites/relogio/relogio.yy",},},
@@ -58,8 +61,11 @@
   "RoomOrderNodes":[
     {"roomId":{"name":"Menu","path":"rooms/Menu/Menu.yy",},},
     {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
-    {"roomId":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
     {"roomId":{"name":"rGameOver","path":"rooms/rGameOver/rGameOver.yy",},},
+    {"roomId":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},
+    {"roomId":{"name":"Room1_1","path":"rooms/Room1_1/Room1_1.yy",},},
+    {"roomId":{"name":"Room1_2","path":"rooms/Room1_2/Room1_2.yy",},},
+    {"roomId":{"name":"Room1_3","path":"rooms/Room1_3/Room1_3.yy",},},
   ],
   "templateType":"game",
   "TextureGroups":[
