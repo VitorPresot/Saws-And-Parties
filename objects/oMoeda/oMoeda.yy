@@ -1,7 +1,9 @@
 {
   "$GMObject":"",
   "%Name":"oMoeda",
-  "eventList":[],
+  "eventList":[
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},"eventNum":0,"eventType":4,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+  ],
   "managed":true,
   "name":"oMoeda",
   "overriddenProperties":[],
