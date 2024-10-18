@@ -1,13 +1,12 @@
 {
   "$GMRoom":"v1",
   "%Name":"Room1_1",
-  "creationCodeFile":"rooms/Room1_1/RoomCreationCode.gml",
+  "creationCodeFile":"rooms/Room1/RoomCreationCode.gml",
   "inheritCode":false,
   "inheritCreationOrder":false,
   "inheritLayers":false,
   "instanceCreationOrder":[
     {"name":"inst_1FB80111_2","path":"rooms/Room1_1/Room1_1.yy",},
-    {"name":"inst_6DE4D2B3_2","path":"rooms/Room1_1/Room1_1.yy",},
     {"name":"inst_70CD52E7_2","path":"rooms/Room1_1/Room1_1.yy",},
     {"name":"inst_2408FAC1_2","path":"rooms/Room1_1/Room1_1.yy",},
     {"name":"inst_602DA8D4_2","path":"rooms/Room1_1/Room1_1.yy",},
@@ -31,6 +30,7 @@
     {"name":"inst_7D890376_2","path":"rooms/Room1_1/Room1_1.yy",},
     {"name":"inst_4C740889_2","path":"rooms/Room1_1/Room1_1.yy",},
     {"name":"inst_8662B0F_2","path":"rooms/Room1_1/Room1_1.yy",},
+    {"name":"inst_6DE4D2B3_2","path":"rooms/Room1_1/Room1_1.yy",},
   ],
   "isDnd":false,
   "layers":[
