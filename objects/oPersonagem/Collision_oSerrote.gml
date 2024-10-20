@@ -1,2 +1,3 @@
 instance_destroy();
-room_goto(GameOver)
+
+game_restart()
