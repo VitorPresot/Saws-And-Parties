@@ -1,4 +1,6 @@
-if (keyboard_check_pressed(vk_enter)) {
+/// @description Inserir descrição aqui
+// Você pode escrever seu código neste editor
+if (keyboard_check_pressed(vk_numpad1)) {
     if (index == 0) {
         room_goto_next() // Muda para a próxima sala (Novo Jogo)
     } else if (index == 1) {
