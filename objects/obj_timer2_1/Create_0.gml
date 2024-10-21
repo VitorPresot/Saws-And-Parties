@@ -1,3 +1,3 @@
-mytime3 = 25;  // Tempo inicial em segundos
+mytime3 = 18;  // Tempo inicial em segundos
 showTime = mytime2;
 
