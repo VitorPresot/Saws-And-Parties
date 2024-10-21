@@ -22,4 +22,4 @@ for (var i = 0; i < op_max; i++) {
 
 draw_set_font(ft_menu);
 
-draw_text(660,605,"Jogar")
+draw_text(680,630,"Jogar")
