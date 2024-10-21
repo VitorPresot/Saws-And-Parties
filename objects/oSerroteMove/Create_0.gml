@@ -1,4 +1,2 @@
-/// @description Inserir descrição aqui
-// Você pode escrever seu código neste editor
-hsp=random_range(3,3)
-vsp=random_range(3,3)
+hsp = random_range(2, 4);  // Velocidade horizontal aleatória
+vsp = random_range(2, 4);  // Velocidade vertical aleatória

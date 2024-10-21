@@ -17,6 +17,7 @@
     {"$GMFolder":"","%Name":"Sprites","folderPath":"folders/Sprites.yy","name":"Sprites","resourceType":"GMFolder","resourceVersion":"2.0",},
   ],
   "IncludedFiles":[
+    {"$GMIncludedFile":"","%Name":"HomeVideo-BLG6G.ttf","CopyToMask":-1,"filePath":"datafiles","name":"HomeVideo-BLG6G.ttf","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
     {"$GMIncludedFile":"","%Name":"WhatsApp Audio 2024-10-20 at 11.34.39 (1).mpeg","CopyToMask":-1,"filePath":"datafiles/musi","name":"WhatsApp Audio 2024-10-20 at 11.34.39 (1).mpeg","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
     {"$GMIncludedFile":"","%Name":"WhatsApp Audio 2024-10-20 at 11.34.39.mp4","CopyToMask":-1,"filePath":"datafiles/musi","name":"WhatsApp Audio 2024-10-20 at 11.34.39.mp4","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
     {"$GMIncludedFile":"","%Name":"WhatsApp Audio 2024-10-20 at 11.34.39.mpeg","CopyToMask":-1,"filePath":"datafiles/musi","name":"WhatsApp Audio 2024-10-20 at 11.34.39.mpeg","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
@@ -25,12 +26,13 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.8.1.171",
+    "IDEVersion":"2024.1100.0.634",
   },
   "name":"Meu primeiro jogo",
   "resources":[
     {"id":{"name":"Font2","path":"fonts/Font2/Font2.yy",},},
     {"id":{"name":"Font3","path":"fonts/Font3/Font3.yy",},},
+    {"id":{"name":"Font4","path":"fonts/Font4/Font4.yy",},},
     {"id":{"name":"ft_menu","path":"fonts/ft_menu/ft_menu.yy",},},
     {"id":{"name":"contMoeda","path":"objects/contMoeda/contMoeda.yy",},},
     {"id":{"name":"menuObj","path":"objects/menuObj/menuObj.yy",},},
@@ -42,6 +44,7 @@
     {"id":{"name":"Object12","path":"objects/Object12/Object12.yy",},},
     {"id":{"name":"Object13","path":"objects/Object13/Object13.yy",},},
     {"id":{"name":"oGameOver","path":"objects/oGameOver/oGameOver.yy",},},
+    {"id":{"name":"oHUD","path":"objects/oHUD/oHUD.yy",},},
     {"id":{"name":"oMoeda","path":"objects/oMoeda/oMoeda.yy",},},
     {"id":{"name":"oPersonagem","path":"objects/oPersonagem/oPersonagem.yy",},},
     {"id":{"name":"oSerrote","path":"objects/oSerrote/oSerrote.yy",},},
