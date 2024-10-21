@@ -4,20 +4,20 @@
 // Movimentação
 
 if keyboard_check(vk_up) {
-    y -= 1.2;
+    y -= 2;
 }
 
 if keyboard_check(vk_down) {
-    y += 1.2;
+    y += 2;
 }
 
 if keyboard_check(vk_left) {
-    x -= 1.2;
+    x -= 2;
     image_xscale = -0.35; // Inverter sprite ao ir para a esquerda
 }
 
 if keyboard_check(vk_right) {
-    x += 1.2;
+    x += 2;
     image_xscale = 0.35;  // Manter sprite na direção original
 }
 

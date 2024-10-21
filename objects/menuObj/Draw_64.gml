@@ -1,6 +1,6 @@
 draw_set_font(ft_menu);
 draw_set_color(c_white);
-
+var padding = 400;
 var dist = 50;
 var gui_largura = display_get_gui_width();
 var gui_altura = display_get_gui_height();
@@ -20,4 +20,6 @@ for (var i = 0; i < op_max; i++) {
     draw_text(x1, y1 + (dist * i), opcoes[i]); // Desenha o texto das opções
 }
 
-draw_set_font(-1);
+draw_set_font(ft_menu);
+
+draw_text(660,605,"Jogar")

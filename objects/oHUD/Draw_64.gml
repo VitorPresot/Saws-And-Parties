@@ -1,5 +1,5 @@
 // Definir espaçamento e posição inicial
-var padding = 20;  // Espaçamento entre os elementos
+/*var padding = 20;  // Espaçamento entre os elementos
 var right_x = display_get_width() - padding;  // Posição X no canto direito da tela
 var top_y = padding;  // Posição Y no canto superior
 
