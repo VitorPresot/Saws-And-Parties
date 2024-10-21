@@ -24,13 +24,13 @@ if keyboard_check(vk_right) {
 // Limitar o movimento do personagem dentro da sala com ajustes nas bordas
 
 // Aumentar o limite superior (mais espaço no teto)
-if y < -50 {  // O valor -50 aumenta a "parede" do teto
-    y = -50;
+if y < 15 {  // O valor -50 aumenta a "parede" do teto
+    y = 15;
 }
 
 // Aumentar o limite da esquerda (mais espaço à esquerda)
-if x < -50 {  // O valor -50 aumenta a "parede" da esquerda
-    x = -50;
+if x < 7 {  // O valor -50 aumenta a "parede" da esquerda
+    x = 7;
 }
 
 // Diminuir o limite inferior (menos espaço na parte de baixo)
