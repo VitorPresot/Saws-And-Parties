@@ -34,13 +34,13 @@ if x < 7 {  // O valor -50 aumenta a "parede" da esquerda
 }
 
 // Diminuir o limite inferior (menos espaço na parte de baixo)
-if y > room_height - sprite_height + 25 {  // O valor +20 diminui a "parede" inferior
-    y = room_height - sprite_height + 25;
+if y > room_height - sprite_height + 50 {  // O valor +20 diminui a "parede" inferior
+    y = room_height - sprite_height + 50;
 }
 
 // Diminuir o limite da direita (menos espaço à direita)
-if x > room_width - sprite_width + 43 // O valor +20 diminui a "parede" da direita
-    x = room_width - sprite_width + 43;
+if x > room_width - sprite_width + 50 // O valor +20 diminui a "parede" da direita
+    x = room_width - sprite_width + 50;
 
 
 // Mudar de sala ao pegar 16 moedas
@@ -48,7 +48,7 @@ if x > room_width - sprite_width + 43 // O valor +20 diminui a "parede" da direi
 
 // Verifica se alguma tecla de movimento está pressionada
 if keyboard_check(vk_up) || keyboard_check(vk_down) || keyboard_check(vk_left) || keyboard_check(vk_right) {
-    sprite_index = sPersonagemCorre; // Sprite de correr
+    sprite_index = sPersonagemCorre2; // Sprite de correr
 } else {
-    sprite_index = sPersonagem; // Sprite de parada
+    sprite_index = sPersonagem2; // Sprite de parada
 }

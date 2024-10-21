@@ -38,8 +38,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"sPersonagem",
-    "path":"sprites/sPersonagem/sPersonagem.yy",
+    "name":"sPersonagem2",
+    "path":"sprites/sPersonagem2/sPersonagem2.yy",
   },
   "spriteMaskId":null,
   "visible":true,
