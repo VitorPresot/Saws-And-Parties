@@ -48,7 +48,7 @@ if x > room_width - sprite_width + 43 // O valor +20 diminui a "parede" da direi
 
 // Verifica se alguma tecla de movimento está pressionada
 if keyboard_check(vk_up) || keyboard_check(vk_down) || keyboard_check(vk_left) || keyboard_check(vk_right) {
-    sprite_index = player.sprite_walk; // Sprite de correr
+    sprite_index = sPersonagemCorre; // Sprite de correr
 } else {
-    sprite_index = player.sprite_idle; // Sprite de parada
+    sprite_index = sPersonagem; // Sprite de parada
 }
