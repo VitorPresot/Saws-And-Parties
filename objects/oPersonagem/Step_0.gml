@@ -11,14 +11,28 @@ if keyboard_check(vk_down) {
     y += 2;
 }
 
-if keyboard_check(vk_left) {
-    x -= 2;
-    image_xscale = -0.35; // Inverter sprite ao ir para a esquerda
-}
-
-if keyboard_check(vk_right) {
-    x += 2;
-    image_xscale = 0.35;  // Manter sprite na direção original
+if (global.player == 1) {
+    // Inverter as funções quando global.player é igual a 1
+    if keyboard_check(vk_left) {
+        x -= 2; // Move para a direita ao pressionar a seta esquerda
+        image_xscale = 0.35; // Mantém o sprite na direção original
+    }
+    
+    if keyboard_check(vk_right) {
+        x += 2; // Move para a esquerda ao pressionar a seta direita
+        image_xscale = -0.35; // Inverte o sprite ao ir para a direita
+    }
+} else {
+    // Comportamento normal (sem inversão)
+    if keyboard_check(vk_left) {
+        x -= 2; // Move para a esquerda
+        image_xscale = -0.35; // Inverte o sprite ao ir para a esquerda
+    }
+    
+    if keyboard_check(vk_right) {
+        x += 2; // Move para a direita
+        image_xscale = 0.35; // Mantém o sprite na direção original
+    }
 }
 
 // Limitar o movimento do personagem dentro da sala com ajustes nas bordas
@@ -52,3 +66,5 @@ if keyboard_check(vk_up) || keyboard_check(vk_down) || keyboard_check(vk_left) |
 } else {
     sprite_index = player.sprite_idle;// Sprite de parada
 }
+
+

@@ -1,15 +1,15 @@
-/// @description Inserir descrição aqui
-// Você pode escrever seu código neste editor
-var padding = 80;  // Espaçamento entre os elementos
-
-// Calcula a posição central da tela para o timer
-var pos_x = display_get_width() / 2;
+// Configurações de espaçamento e posição
+/*
+var padding = 80;   // Espaçamento entre os elementos
+var pos_x = 20;     // Posição no canto superior esquerdo
 var pos_y = padding;
 
-// Desenha o sprite do relógio
-draw_sprite(relogio, 0, pos_x - sprite_get_width(relogio) - 700, pos_y);
-
-// Desenha o texto do tempo ao lado do sprite do relógio
-draw_set_font(ft_menu);
+// Define a fonte e cor do texto
+draw_set_font(ft_menu);  // Usando a mesma fonte estilo pixelado
 draw_set_color(c_white);
-draw_text(400,115, string(showTime));
+
+// Desenha o texto "Time" no canto superior esquerdo
+draw_text(pos_x, pos_y, "Time");  // Ajuste a posição do texto "Time"
+
+// Desenha o tempo ao lado da palavra "Time"
+draw_text(pos_x + 100, pos_y, string(showTime));  // 100 px de espaçamento após o texto "Time"
