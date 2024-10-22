@@ -1,5 +1,5 @@
 // Configurações de espaçamento e posição
-/*
+
 var padding = 80;   // Espaçamento entre os elementos
 var pos_x = 20;     // Posição no canto superior esquerdo
 var pos_y = padding;
