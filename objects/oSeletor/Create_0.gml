@@ -3,7 +3,9 @@
 switch(player)
 {
 	// 0 é o do Bruno
-	case 0: sprite_index = sPersonagem2; break;
-	case 1: sprite_index = sPersonagem; break;
+	case 0: sprite_index = sPersonagemCorre2; break;
+	case 1: sprite_index = sPersonagemCorre; break;
 		
 }
+
+image_speed = 0;

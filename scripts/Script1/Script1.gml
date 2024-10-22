@@ -19,3 +19,6 @@ constructor{
 	sprite_walk = sPersonagemCorre;
 	
 }
+
+global.player = 0;
+global.escolhe_player = true;
