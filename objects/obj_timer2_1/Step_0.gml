@@ -1,8 +1,8 @@
 if (mytime3 > 0) {
     mytime3 -= delta_time * 0.001 / 1000;  // Reduz o tempo com delta_time em segundos
 } else {
-    game_restart();  // Vai para a sala de menu (use o nome exato da sala)
 	global.escolhe_player = true;
+	room_goto(personagemSelect);
 }
 
 // Atualiza o valor de tempo mostrado (arredondando para cima)
