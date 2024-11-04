@@ -8,8 +8,8 @@
   "name":"oMoeda",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objetos",
-    "path":"folders/Objetos.yy",
+    "name":"Moedas",
+    "path":"folders/Objetos/Moedas.yy",
   },
   "parentObjectId":null,
   "persistent":false,

@@ -10,8 +10,8 @@
   "name":"obj_timer3_1",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objetos",
-    "path":"folders/Objetos.yy",
+    "name":"Timers",
+    "path":"folders/Objetos/Timers.yy",
   },
   "parentObjectId":null,
   "persistent":false,

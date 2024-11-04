@@ -6,8 +6,8 @@
   "name":"oSerrote",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objetos",
-    "path":"folders/Objetos.yy",
+    "name":"Serrotes",
+    "path":"folders/Objetos/Serrotes.yy",
   },
   "parentObjectId":null,
   "persistent":false,

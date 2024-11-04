@@ -9,8 +9,8 @@
   "name":"oSeletor",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objetos",
-    "path":"folders/Objetos.yy",
+    "name":"Personagens",
+    "path":"folders/Objetos/Personagens.yy",
   },
   "parentObjectId":null,
   "persistent":false,
