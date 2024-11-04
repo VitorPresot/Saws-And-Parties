@@ -27,7 +27,7 @@ O objetivo é proteger o "core" do mapa (área central ou ponto de defesa) usand
 - **Movimentação do Personagem**: Controlada pelas setas direcionais `←` e `→`. Se o valor de `global.player` for `1`, as direções serão invertidas.
 - **Reiniciar o Jogo**: Pressionar `F5` para reiniciar o jogo e restaurar todos os assets e variáveis.
 - **Pause da Música e Reinício de Sala**: A música é pausada ao entrar em uma nova sala, e o jogo reinicia automaticamente após 5 segundos.
-- **Tela Cheia**: Ativada automaticamente ao iniciar o jogo usando `window_set_fullscreen(true)`.
+- **Tela Cheia**: Ativada ao pressionar `F11`.
 
 ---
 
