@@ -91,14 +91,11 @@ local function playerImage()
 end
 
 local function playerHitbox()
-    local image = playerImage()
-    local width = image:getWidth() * player.scale
-    local height = image:getHeight() * player.scale
     return {
-        x = player.x + width * 0.32,
-        y = player.y + height * 0.18,
-        width = width * 0.36,
-        height = height * 0.72,
+        x = player.x + player.renderWidth * 0.32,
+        y = player.y + player.renderHeight * 0.18,
+        width = player.renderWidth * 0.36,
+        height = player.renderHeight * 0.72,
     }
 end
 
@@ -138,13 +135,23 @@ local function startLevel(level)
     Game.coins = 0
     Game.timeLeft = level == 1 and 35 or 30
     Game.paused = false
-    local walkImage = assets.characters[Game.selectedCharacter].walk[1]
+    local characterAssets = assets.characters[Game.selectedCharacter]
     local spriteScale = 0.35
+    local renderWidth = characterAssets.idle:getWidth()
+    local renderHeight = characterAssets.idle:getHeight()
+    for _, image in ipairs(characterAssets.walk) do
+        renderWidth = math.max(renderWidth, image:getWidth())
+        renderHeight = math.max(renderHeight, image:getHeight())
+    end
+    renderWidth = renderWidth * spriteScale
+    renderHeight = renderHeight * spriteScale
     player = {
-        x = Game.width / 2,
-        y = Game.height / 2,
-        width = walkImage:getWidth() * spriteScale,
-        height = walkImage:getHeight() * spriteScale,
+        x = (Game.width - renderWidth) / 2,
+        y = (Game.height - renderHeight) / 2,
+        width = renderWidth,
+        height = renderHeight,
+        renderWidth = renderWidth,
+        renderHeight = renderHeight,
         scale = spriteScale,
         facing = 1,
         moving = false,
@@ -242,11 +249,11 @@ function love.keypressed(key)
 end
 
 function love.update(dt)
-    Game.animationTime = Game.animationTime + dt
     if Game.state ~= "playing" or Game.paused then
         return
     end
 
+    Game.animationTime = Game.animationTime + dt
     Game.timeLeft = Game.timeLeft - dt
     if Game.timeLeft <= 0 then
         returnToSelection("O tempo acabou. Tente novamente!")
@@ -265,8 +272,8 @@ function love.update(dt)
     end
 
     local speed = 235
-    player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.width)
-    player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.height)
+    player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.renderWidth)
+    player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.renderHeight)
 
     for _, saw in ipairs(saws) do
         saw.x = saw.x + saw.vx * dt
@@ -354,10 +361,16 @@ function love.draw()
         end
         local image = playerImage()
         local imageWidth = image:getWidth() * player.scale
+        local imageHeight = image:getHeight() * player.scale
+        local drawX = player.x + (player.renderWidth - imageWidth) / 2
+        local drawY = player.y + (player.renderHeight - imageHeight) / 2
+        if player.facing == -1 then
+            drawX = player.x + player.renderWidth - (player.renderWidth - imageWidth) / 2
+        end
         love.graphics.draw(
             image,
-            player.x + (player.facing == -1 and imageWidth or 0),
-            player.y,
+            drawX,
+            drawY,
             0,
             player.scale * player.facing,
             player.scale

@@ -1,1 +1,0 @@
-audio_play_sound(musicaJogo,10,10,true)
