@@ -82,6 +82,26 @@ local function currentFrame(frames, fps)
     return frames[math.floor(Game.animationTime * fps) % #frames + 1]
 end
 
+local function playerImage()
+    local characterAssets = assets.characters[Game.selectedCharacter]
+    if player.moving then
+        return currentFrame(characterAssets.walk, 9)
+    end
+    return characterAssets.idle
+end
+
+local function playerHitbox()
+    local image = playerImage()
+    local width = image:getWidth() * player.scale
+    local height = image:getHeight() * player.scale
+    return {
+        x = player.x + width * 0.32,
+        y = player.y + height * 0.18,
+        width = width * 0.36,
+        height = height * 0.72,
+    }
+end
+
 local function play(sound)
     if sound then
         sound:stop()
@@ -118,7 +138,17 @@ local function startLevel(level)
     Game.coins = 0
     Game.timeLeft = level == 1 and 35 or 30
     Game.paused = false
-    player = { x = Game.width / 2, y = Game.height / 2, width = 52, height = 52, facing = 1, moving = false }
+    local walkImage = assets.characters[Game.selectedCharacter].walk[1]
+    local spriteScale = 0.35
+    player = {
+        x = Game.width / 2,
+        y = Game.height / 2,
+        width = walkImage:getWidth() * spriteScale,
+        height = walkImage:getHeight() * spriteScale,
+        scale = spriteScale,
+        facing = 1,
+        moving = false,
+    }
     coins = {}
     saws = {}
 
@@ -197,9 +227,9 @@ function love.keypressed(key)
     if Game.state == "playing" and key == "escape" then
         Game.paused = not Game.paused
         if Game.paused then
-            love.audio.pause()
+            assets.music:pause()
         else
-            love.audio.resume()
+            assets.music:play()
         end
         return
     end
@@ -249,7 +279,7 @@ function love.update(dt)
             saw.vy = -saw.vy
             saw.y = clamp(saw.y, 60, Game.height - saw.height)
         end
-        if overlaps(player, saw) then
+        if overlaps(playerHitbox(), saw) then
             Game.state = "gameover"
             Game.statusMessage = "Game Over!"
             assets.music:stop()
@@ -258,7 +288,7 @@ function love.update(dt)
     end
 
     for index = #coins, 1, -1 do
-        if overlaps(player, coins[index]) then
+        if overlaps(playerHitbox(), coins[index]) then
             table.remove(coins, index)
             Game.coins = Game.coins + 1
             play(assets.coinSound)
@@ -322,16 +352,15 @@ function love.draw()
             local image = currentFrame(assets.saws, 10)
             love.graphics.draw(image, saw.x, saw.y, 0, saw.width / image:getWidth(), saw.height / image:getHeight())
         end
-        local characterAssets = assets.characters[Game.selectedCharacter]
-        local image = player.moving and currentFrame(characterAssets.walk, 9) or characterAssets.idle
-        local spriteScale = player.height / image:getHeight()
+        local image = playerImage()
+        local imageWidth = image:getWidth() * player.scale
         love.graphics.draw(
             image,
-            player.x + (player.facing == -1 and player.width or 0),
+            player.x + (player.facing == -1 and imageWidth or 0),
             player.y,
             0,
-            spriteScale * player.facing,
-            spriteScale
+            player.scale * player.facing,
+            player.scale
         )
         love.graphics.setColor(0, 0, 0, 0.7)
         love.graphics.rectangle("fill", 0, 0, Game.width, 55)
