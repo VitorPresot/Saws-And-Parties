@@ -1,3 +1,31 @@
+# Saws and Parties — versão LÖVE2D
+
+Esta é a conversão do jogo original em GameMaker Language (GML) para **Lua com LÖVE2D 11.5**. Os scripts GML e assets originais permanecem no repositório como referência; a versão executável está em `main.lua` e `conf.lua`.
+
+## Executar
+
+1. Instale o [LÖVE2D 11.5](https://love2d.org/).
+2. Na raiz do projeto, execute:
+
+   ```sh
+   love .
+   ```
+
+## Controles
+
+| Ação | Teclas |
+| --- | --- |
+| Mover | Setas ou WASD |
+| Selecionar personagem | Esquerda/Direita ou A/D |
+| Confirmar | Enter ou Espaço |
+| Pausar | Esc |
+| Reiniciar/voltar à seleção | F5 |
+| Tela cheia | F11 |
+
+Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do tempo acabar para avançar pelas quatro fases. Colidir com uma serra ou deixar o cronômetro terminar retorna à seleção.
+
+---
+
 # **Documentação do Jogo: Projeto Saws and Parties**
 
 ### **Índice**
