@@ -14,6 +14,10 @@ local assets = {}
 local player
 local coins = {}
 local saws = {}
+local gamepad
+local gamepadSelectionRepeat = 0
+
+local GAMEPAD_DEADZONE = 0.2
 
 local characters = {
     {
@@ -69,6 +73,39 @@ end
 
 local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
+end
+
+local function refreshGamepad()
+    gamepad = nil
+    for _, joystick in ipairs(love.joystick.getJoysticks()) do
+        if joystick:isGamepad() then
+            gamepad = joystick
+            return
+        end
+    end
+end
+
+local function gamepadAxis(axis)
+    if not gamepad then
+        return 0
+    end
+    local value = gamepad:getGamepadAxis(axis)
+    if math.abs(value) < GAMEPAD_DEADZONE then
+        return 0
+    end
+    return value
+end
+
+local function gamepadConfirm(button)
+    return button == "a" or button == "start"
+end
+
+local function goToPreviousCharacter()
+    Game.selectedCharacter = Game.selectedCharacter == 1 and #characters or Game.selectedCharacter - 1
+end
+
+local function goToNextCharacter()
+    Game.selectedCharacter = Game.selectedCharacter == #characters and 1 or Game.selectedCharacter + 1
 end
 
 local function overlaps(a, b)
@@ -200,6 +237,7 @@ function love.load()
     assets.titleFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 52)
     assets.music = love.audio.newSource("sounds/musicaJogo/musicaJogo.mp3", "stream")
     assets.coinSound = love.audio.newSource("sounds/somMoeda/somMoeda.mp3", "static")
+    refreshGamepad()
 end
 
 function love.keypressed(key)
@@ -248,7 +286,62 @@ function love.keypressed(key)
     end
 end
 
+function love.joystickadded(joystick)
+    if not gamepad and joystick:isGamepad() then
+        gamepad = joystick
+    end
+end
+
+function love.joystickremoved(joystick)
+    if gamepad == joystick then
+        refreshGamepad()
+    end
+end
+
+function love.gamepadpressed(joystick, button)
+    if joystick ~= gamepad then
+        return
+    end
+
+    if Game.state == "menu" and gamepadConfirm(button) then
+        Game.state = "select"
+    elseif Game.state == "select" then
+        if button == "dpleft" or button == "leftshoulder" then
+            goToPreviousCharacter()
+        elseif button == "dpright" or button == "rightshoulder" then
+            goToNextCharacter()
+        elseif gamepadConfirm(button) then
+            startLevel(1)
+        elseif button == "b" or button == "back" then
+            Game.state = "menu"
+        end
+    elseif Game.state == "playing" then
+        if button == "start" or button == "back" then
+            Game.paused = not Game.paused
+            if Game.paused then
+                assets.music:pause()
+            else
+                assets.music:play()
+            end
+        end
+    elseif (Game.state == "gameover" or Game.state == "victory") and gamepadConfirm(button) then
+        returnToSelection()
+    end
+end
+
 function love.update(dt)
+    if Game.state == "select" and gamepad then
+        local horizontal = gamepadAxis("leftx")
+        gamepadSelectionRepeat = math.max(0, gamepadSelectionRepeat - dt)
+        if gamepadSelectionRepeat == 0 and horizontal <= -0.6 then
+            goToPreviousCharacter()
+            gamepadSelectionRepeat = 0.25
+        elseif gamepadSelectionRepeat == 0 and horizontal >= 0.6 then
+            goToNextCharacter()
+            gamepadSelectionRepeat = 0.25
+        end
+    end
+
     if Game.state ~= "playing" or Game.paused then
         return
     end
@@ -262,6 +355,24 @@ function love.update(dt)
 
     local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0) - (love.keyboard.isDown("left", "a") and 1 or 0)
     local vertical = (love.keyboard.isDown("down", "s") and 1 or 0) - (love.keyboard.isDown("up", "w") and 1 or 0)
+    local gamepadHorizontal = gamepadAxis("leftx")
+    local gamepadVertical = gamepadAxis("lefty")
+    if gamepad then
+        if gamepad:isGamepadDown("dpleft") then
+            gamepadHorizontal = -1
+        elseif gamepad:isGamepadDown("dpright") then
+            gamepadHorizontal = 1
+        end
+        if gamepad:isGamepadDown("dpup") then
+            gamepadVertical = -1
+        elseif gamepad:isGamepadDown("dpdown") then
+            gamepadVertical = 1
+        end
+    end
+    if gamepadHorizontal ~= 0 or gamepadVertical ~= 0 then
+        horizontal = gamepadHorizontal
+        vertical = gamepadVertical
+    end
     player.moving = horizontal ~= 0 or vertical ~= 0
     if horizontal ~= 0 and vertical ~= 0 then
         horizontal = horizontal * 0.707

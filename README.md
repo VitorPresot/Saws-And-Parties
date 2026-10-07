@@ -22,6 +22,18 @@ love .
 | Reiniciar/voltar à seleção | F5 |
 | Tela cheia | F11 |
 
+### Gamepad
+
+O jogo aceita qualquer controle reconhecido pelo LÖVE2D como gamepad:
+
+| Ação | Gamepad |
+| --- | --- |
+| Mover | Analógico esquerdo ou D-pad |
+| Selecionar personagem | Analógico esquerdo, D-pad ou bumpers |
+| Confirmar | A ou Start |
+| Voltar | B |
+| Pausar | Start ou Back |
+
 Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do
 tempo acabar para avançar pelas quatro fases. Colidir com uma serra ou deixar
 o cronômetro terminar retorna à seleção.
