@@ -77,11 +77,11 @@ end
 
 local function refreshGamepad()
     gamepad = nil
+    Game.controllerName = nil
     for _, joystick in ipairs(love.joystick.getJoysticks()) do
-        if joystick:isGamepad() then
-            gamepad = joystick
-            return
-        end
+        gamepad = joystick
+        Game.controllerName = joystick:getName()
+        return
     end
 end
 
@@ -89,7 +89,13 @@ local function gamepadAxis(axis)
     if not gamepad then
         return 0
     end
-    local value = gamepad:getGamepadAxis(axis)
+    local value
+    if gamepad:isGamepad() then
+        value = gamepad:getGamepadAxis(axis)
+    else
+        local rawAxis = axis == "leftx" and 1 or 2
+        value = gamepad:getAxis(rawAxis) or 0
+    end
     if math.abs(value) < GAMEPAD_DEADZONE then
         return 0
     end
@@ -98,6 +104,19 @@ end
 
 local function gamepadConfirm(button)
     return button == "a" or button == "start"
+end
+
+local function rawButtonDown(button)
+    return gamepad and gamepad:getButtonCount() >= button and gamepad:isDown(button)
+end
+
+local function rawDpad()
+    if not gamepad or gamepad:getHatCount() == 0 then
+        return 0, 0
+    end
+    local hat = gamepad:getHat(1)
+    return (hat:find("l") and -1 or hat:find("r") and 1 or 0),
+        (hat:find("u") and -1 or hat:find("d") and 1 or 0)
 end
 
 local function goToPreviousCharacter()
@@ -287,8 +306,9 @@ function love.keypressed(key)
 end
 
 function love.joystickadded(joystick)
-    if not gamepad and joystick:isGamepad() then
+    if not gamepad then
         gamepad = joystick
+        Game.controllerName = joystick:getName()
     end
 end
 
@@ -329,9 +349,37 @@ function love.gamepadpressed(joystick, button)
     end
 end
 
+function love.joystickpressed(joystick, button)
+    if joystick ~= gamepad or joystick:isGamepad() then
+        return
+    end
+
+    if button == 1 then
+        love.gamepadpressed(joystick, "a")
+    elseif button == 2 then
+        love.gamepadpressed(joystick, "b")
+    elseif button == 7 then
+        love.gamepadpressed(joystick, "back")
+    elseif button == 8 then
+        love.gamepadpressed(joystick, "start")
+    elseif button == 11 then
+        love.gamepadpressed(joystick, "dpup")
+    elseif button == 12 then
+        love.gamepadpressed(joystick, "dpdown")
+    elseif button == 13 then
+        love.gamepadpressed(joystick, "dpleft")
+    elseif button == 14 then
+        love.gamepadpressed(joystick, "dpright")
+    end
+end
+
 function love.update(dt)
     if Game.state == "select" and gamepad then
         local horizontal = gamepadAxis("leftx")
+        local hatHorizontal = rawDpad()
+        if math.abs(horizontal) < 0.6 then
+            horizontal = hatHorizontal
+        end
         gamepadSelectionRepeat = math.max(0, gamepadSelectionRepeat - dt)
         if gamepadSelectionRepeat == 0 and horizontal <= -0.6 then
             goToPreviousCharacter()
@@ -358,15 +406,24 @@ function love.update(dt)
     local gamepadHorizontal = gamepadAxis("leftx")
     local gamepadVertical = gamepadAxis("lefty")
     if gamepad then
-        if gamepad:isGamepadDown("dpleft") then
+        local hatHorizontal, hatVertical = rawDpad()
+        local dpadLeft = gamepad:isGamepad() and gamepad:isGamepadDown("dpleft") or rawButtonDown(13)
+        local dpadRight = gamepad:isGamepad() and gamepad:isGamepadDown("dpright") or rawButtonDown(14)
+        local dpadUp = gamepad:isGamepad() and gamepad:isGamepadDown("dpup") or rawButtonDown(11)
+        local dpadDown = gamepad:isGamepad() and gamepad:isGamepadDown("dpdown") or rawButtonDown(12)
+        if dpadLeft then
             gamepadHorizontal = -1
-        elseif gamepad:isGamepadDown("dpright") then
+        elseif dpadRight then
             gamepadHorizontal = 1
+        elseif hatHorizontal ~= 0 then
+            gamepadHorizontal = hatHorizontal
         end
-        if gamepad:isGamepadDown("dpup") then
+        if dpadUp then
             gamepadVertical = -1
-        elseif gamepad:isGamepadDown("dpdown") then
+        elseif dpadDown then
             gamepadVertical = 1
+        elseif hatVertical ~= 0 then
+            gamepadVertical = hatVertical
         end
     end
     if gamepadHorizontal ~= 0 or gamepadVertical ~= 0 then
@@ -446,6 +503,9 @@ function love.draw()
         drawCentered("ESCOLHA SEU PERSONAGEM", 65, assets.titleFont)
         if Game.statusMessage then
             drawCentered(Game.statusMessage, 135, assets.font)
+        end
+        if Game.controllerName then
+            drawCentered("Controle: " .. Game.controllerName, 170, assets.font)
         end
         for index, character in ipairs(characters) do
             local x = index == 1 and 350 or 850

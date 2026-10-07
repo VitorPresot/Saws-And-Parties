@@ -24,7 +24,8 @@ love .
 
 ### Gamepad
 
-O jogo aceita qualquer controle reconhecido pelo LÖVE2D como gamepad:
+O jogo aceita controles reconhecidos pelo LÖVE2D como gamepad e também usa
+eixos/botões brutos como fallback para controles genéricos:
 
 | Ação | Gamepad |
 | --- | --- |
