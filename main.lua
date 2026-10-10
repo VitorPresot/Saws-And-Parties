@@ -14,6 +14,10 @@ local assets = {}
 local player
 local coins = {}
 local saws = {}
+local gamepad
+local gamepadSelectionRepeat = 0
+
+local GAMEPAD_DEADZONE = 0.2
 
 local characters = {
     {
@@ -71,6 +75,58 @@ local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
 end
 
+local function refreshGamepad()
+    gamepad = nil
+    Game.controllerName = nil
+    for _, joystick in ipairs(love.joystick.getJoysticks()) do
+        gamepad = joystick
+        Game.controllerName = joystick:getName()
+        return
+    end
+end
+
+local function gamepadAxis(axis)
+    if not gamepad then
+        return 0
+    end
+    local value
+    if gamepad:isGamepad() then
+        value = gamepad:getGamepadAxis(axis)
+    else
+        local rawAxis = axis == "leftx" and 1 or 2
+        value = gamepad:getAxis(rawAxis) or 0
+    end
+    if math.abs(value) < GAMEPAD_DEADZONE then
+        return 0
+    end
+    return value
+end
+
+local function gamepadConfirm(button)
+    return button == "a" or button == "start"
+end
+
+local function rawButtonDown(button)
+    return gamepad and gamepad:getButtonCount() >= button and gamepad:isDown(button)
+end
+
+local function rawDpad()
+    if not gamepad or gamepad:getHatCount() == 0 then
+        return 0, 0
+    end
+    local hat = gamepad:getHat(1)
+    return (hat:find("l") and -1 or hat:find("r") and 1 or 0),
+        (hat:find("u") and -1 or hat:find("d") and 1 or 0)
+end
+
+local function goToPreviousCharacter()
+    Game.selectedCharacter = Game.selectedCharacter == 1 and #characters or Game.selectedCharacter - 1
+end
+
+local function goToNextCharacter()
+    Game.selectedCharacter = Game.selectedCharacter == #characters and 1 or Game.selectedCharacter + 1
+end
+
 local function overlaps(a, b)
     return a.x < b.x + b.width
         and b.x < a.x + a.width
@@ -91,14 +147,11 @@ local function playerImage()
 end
 
 local function playerHitbox()
-    local image = playerImage()
-    local width = image:getWidth() * player.scale
-    local height = image:getHeight() * player.scale
     return {
-        x = player.x + width * 0.32,
-        y = player.y + height * 0.18,
-        width = width * 0.36,
-        height = height * 0.72,
+        x = player.x + player.renderWidth * 0.32,
+        y = player.y + player.renderHeight * 0.18,
+        width = player.renderWidth * 0.36,
+        height = player.renderHeight * 0.72,
     }
 end
 
@@ -138,13 +191,23 @@ local function startLevel(level)
     Game.coins = 0
     Game.timeLeft = level == 1 and 35 or 30
     Game.paused = false
-    local walkImage = assets.characters[Game.selectedCharacter].walk[1]
+    local characterAssets = assets.characters[Game.selectedCharacter]
     local spriteScale = 0.35
+    local renderWidth = characterAssets.idle:getWidth()
+    local renderHeight = characterAssets.idle:getHeight()
+    for _, image in ipairs(characterAssets.walk) do
+        renderWidth = math.max(renderWidth, image:getWidth())
+        renderHeight = math.max(renderHeight, image:getHeight())
+    end
+    renderWidth = renderWidth * spriteScale
+    renderHeight = renderHeight * spriteScale
     player = {
-        x = Game.width / 2,
-        y = Game.height / 2,
-        width = walkImage:getWidth() * spriteScale,
-        height = walkImage:getHeight() * spriteScale,
+        x = (Game.width - renderWidth) / 2,
+        y = (Game.height - renderHeight) / 2,
+        width = renderWidth,
+        height = renderHeight,
+        renderWidth = renderWidth,
+        renderHeight = renderHeight,
         scale = spriteScale,
         facing = 1,
         moving = false,
@@ -193,6 +256,7 @@ function love.load()
     assets.titleFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 52)
     assets.music = love.audio.newSource("sounds/musicaJogo/musicaJogo.mp3", "stream")
     assets.coinSound = love.audio.newSource("sounds/somMoeda/somMoeda.mp3", "static")
+    refreshGamepad()
 end
 
 function love.keypressed(key)
@@ -241,12 +305,96 @@ function love.keypressed(key)
     end
 end
 
+function love.joystickadded(joystick)
+    if not gamepad then
+        gamepad = joystick
+        Game.controllerName = joystick:getName()
+    end
+end
+
+function love.joystickremoved(joystick)
+    if gamepad == joystick then
+        refreshGamepad()
+    end
+end
+
+function love.gamepadpressed(joystick, button)
+    if joystick ~= gamepad then
+        return
+    end
+
+    if Game.state == "menu" and gamepadConfirm(button) then
+        Game.state = "select"
+    elseif Game.state == "select" then
+        if button == "dpleft" or button == "leftshoulder" then
+            goToPreviousCharacter()
+        elseif button == "dpright" or button == "rightshoulder" then
+            goToNextCharacter()
+        elseif gamepadConfirm(button) then
+            startLevel(1)
+        elseif button == "b" or button == "back" then
+            Game.state = "menu"
+        end
+    elseif Game.state == "playing" then
+        if button == "start" or button == "back" then
+            Game.paused = not Game.paused
+            if Game.paused then
+                assets.music:pause()
+            else
+                assets.music:play()
+            end
+        end
+    elseif (Game.state == "gameover" or Game.state == "victory") and gamepadConfirm(button) then
+        returnToSelection()
+    end
+end
+
+function love.joystickpressed(joystick, button)
+    if joystick ~= gamepad or joystick:isGamepad() then
+        return
+    end
+
+    if button == 1 then
+        love.gamepadpressed(joystick, "a")
+    elseif button == 2 then
+        love.gamepadpressed(joystick, "b")
+    elseif button == 7 then
+        love.gamepadpressed(joystick, "back")
+    elseif button == 8 then
+        love.gamepadpressed(joystick, "start")
+    elseif button == 11 then
+        love.gamepadpressed(joystick, "dpup")
+    elseif button == 12 then
+        love.gamepadpressed(joystick, "dpdown")
+    elseif button == 13 then
+        love.gamepadpressed(joystick, "dpleft")
+    elseif button == 14 then
+        love.gamepadpressed(joystick, "dpright")
+    end
+end
+
 function love.update(dt)
-    Game.animationTime = Game.animationTime + dt
+    if Game.state == "select" and gamepad then
+        local horizontal = gamepadAxis("leftx")
+        local hatHorizontal = rawDpad()
+        if math.abs(horizontal) < 0.6 then
+            horizontal = hatHorizontal
+        end
+        gamepadSelectionRepeat = math.max(0, gamepadSelectionRepeat - dt)
+        if gamepadSelectionRepeat == 0 and horizontal <= -0.6 then
+            goToPreviousCharacter()
+            gamepadSelectionRepeat = 0.25
+        elseif gamepadSelectionRepeat == 0 and horizontal >= 0.6 then
+            goToNextCharacter()
+            gamepadSelectionRepeat = 0.25
+        end
+    end
+
     if Game.state ~= "playing" or Game.paused then
         return
     end
 
+    Game.animationTime = Game.animationTime + dt
     Game.timeLeft = Game.timeLeft - dt
     if Game.timeLeft <= 0 then
         returnToSelection("O tempo acabou. Tente novamente!")
@@ -255,6 +403,33 @@ function love.update(dt)
 
     local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0) - (love.keyboard.isDown("left", "a") and 1 or 0)
     local vertical = (love.keyboard.isDown("down", "s") and 1 or 0) - (love.keyboard.isDown("up", "w") and 1 or 0)
+    local gamepadHorizontal = gamepadAxis("leftx")
+    local gamepadVertical = gamepadAxis("lefty")
+    if gamepad then
+        local hatHorizontal, hatVertical = rawDpad()
+        local dpadLeft = gamepad:isGamepad() and gamepad:isGamepadDown("dpleft") or rawButtonDown(13)
+        local dpadRight = gamepad:isGamepad() and gamepad:isGamepadDown("dpright") or rawButtonDown(14)
+        local dpadUp = gamepad:isGamepad() and gamepad:isGamepadDown("dpup") or rawButtonDown(11)
+        local dpadDown = gamepad:isGamepad() and gamepad:isGamepadDown("dpdown") or rawButtonDown(12)
+        if dpadLeft then
+            gamepadHorizontal = -1
+        elseif dpadRight then
+            gamepadHorizontal = 1
+        elseif hatHorizontal ~= 0 then
+            gamepadHorizontal = hatHorizontal
+        end
+        if dpadUp then
+            gamepadVertical = -1
+        elseif dpadDown then
+            gamepadVertical = 1
+        elseif hatVertical ~= 0 then
+            gamepadVertical = hatVertical
+        end
+    end
+    if gamepadHorizontal ~= 0 or gamepadVertical ~= 0 then
+        horizontal = gamepadHorizontal
+        vertical = gamepadVertical
+    end
     player.moving = horizontal ~= 0 or vertical ~= 0
     if horizontal ~= 0 and vertical ~= 0 then
         horizontal = horizontal * 0.707
@@ -265,8 +440,8 @@ function love.update(dt)
     end
 
     local speed = 235
-    player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.width)
-    player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.height)
+    player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.renderWidth)
+    player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.renderHeight)
 
     for _, saw in ipairs(saws) do
         saw.x = saw.x + saw.vx * dt
@@ -329,6 +504,9 @@ function love.draw()
         if Game.statusMessage then
             drawCentered(Game.statusMessage, 135, assets.font)
         end
+        if Game.controllerName then
+            drawCentered("Controle: " .. Game.controllerName, 170, assets.font)
+        end
         for index, character in ipairs(characters) do
             local x = index == 1 and 350 or 850
             local selected = index == Game.selectedCharacter
@@ -354,10 +532,16 @@ function love.draw()
         end
         local image = playerImage()
         local imageWidth = image:getWidth() * player.scale
+        local imageHeight = image:getHeight() * player.scale
+        local drawX = player.x + (player.renderWidth - imageWidth) / 2
+        local drawY = player.y + (player.renderHeight - imageHeight) / 2
+        if player.facing == -1 then
+            drawX = player.x + player.renderWidth - (player.renderWidth - imageWidth) / 2
+        end
         love.graphics.draw(
             image,
-            player.x + (player.facing == -1 and imageWidth or 0),
-            player.y,
+            drawX,
+            drawY,
             0,
             player.scale * player.facing,
             player.scale
