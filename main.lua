@@ -246,6 +246,60 @@ local function drawCentered(text, y, font)
     love.graphics.printf(text, 0, y, Game.width, "center")
 end
 
+local function drawDiscoBackground(level)
+    local palettes = {
+        { base = {0.025, 0.01, 0.09}, primary = {0.95, 0.08, 0.55}, secondary = {0.18, 0.35, 1.0} },
+        { base = {0.01, 0.06, 0.08}, primary = {0.05, 0.95, 0.85}, secondary = {0.15, 0.35, 1.0} },
+        { base = {0.08, 0.015, 0.025}, primary = {1.0, 0.25, 0.04}, secondary = {1.0, 0.8, 0.08} },
+        { base = {0.04, 0.01, 0.09}, primary = {0.65, 0.15, 1.0}, secondary = {0.05, 0.95, 0.95} },
+    }
+    local palette = palettes[((level - 1) % #palettes) + 1]
+    local time = Game.animationTime
+
+    love.graphics.setColor(palette.base[1], palette.base[2], palette.base[3], 1)
+    love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
+
+    love.graphics.setColor(palette.secondary[1], palette.secondary[2], palette.secondary[3], 0.14)
+    love.graphics.rectangle("fill", 0, 0, Game.width, 410)
+    love.graphics.setColor(palette.primary[1], palette.primary[2], palette.primary[3], 0.18)
+    love.graphics.rectangle("fill", 0, 410, Game.width, 35)
+
+    for index = 0, 5 do
+        local x = (index + 0.5) * Game.width / 6
+        local sweep = math.sin(time * (0.7 + level * 0.08) + index * 1.8) * 170
+        love.graphics.setColor(palette.primary[1], palette.primary[2], palette.primary[3], 0.08)
+        love.graphics.polygon("fill", x - 35, 0, x + 35, 0, x + 190 + sweep, 435, x - 190 + sweep, 435)
+        love.graphics.setColor(palette.secondary[1], palette.secondary[2], palette.secondary[3], 0.35)
+        love.graphics.circle("fill", x + sweep * 0.35, 105 + math.sin(time + index) * 25, 24 + level * 2)
+    end
+
+    for index = 1, 24 do
+        local x = index * 57 + math.sin(time * 1.8 + index) * 8
+        local height = 18 + (math.sin(time * 4 + index * 0.9) + 1) * (12 + level * 3)
+        local alpha = 0.2 + (math.sin(time * 5 + index) + 1) * 0.12
+        love.graphics.setColor(palette.primary[1], palette.primary[2], palette.primary[3], alpha)
+        love.graphics.rectangle("fill", x, 405 - height, 22, height)
+    end
+
+    local tileWidth = 80
+    local tileHeight = 42
+    for row = 0, 6 do
+        for column = 0, 15 do
+            local pulse = math.sin(time * 4.5 + row * 0.8 + column * 1.35 + level)
+            local alternate = (row + column + level) % 2 == 0
+            local color = alternate and palette.primary or palette.secondary
+            local brightness = 0.12 + math.max(0, pulse) * 0.42
+            love.graphics.setColor(color[1], color[2], color[3], brightness)
+            love.graphics.rectangle("fill", column * tileWidth + 2, 440 + row * tileHeight + 2, tileWidth - 4, tileHeight - 4)
+            love.graphics.setColor(color[1], color[2], color[3], 0.32)
+            love.graphics.rectangle("line", column * tileWidth, 440 + row * tileHeight, tileWidth, tileHeight)
+        end
+    end
+
+    love.graphics.setColor(1, 1, 1, 0.08)
+    love.graphics.rectangle("fill", 0, 438, Game.width, 4)
+end
+
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
     love.math.setRandomSeed(os.time())
@@ -495,7 +549,11 @@ function love.draw()
     love.graphics.translate(viewOffsetX, viewOffsetY)
     love.graphics.scale(viewScale, viewScale)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(assets.background, 0, 0, 0, Game.width / assets.background:getWidth(), Game.height / assets.background:getHeight())
+    if Game.state == "playing" then
+        drawDiscoBackground(Game.level)
+    else
+        love.graphics.draw(assets.background, 0, 0, 0, Game.width / assets.background:getWidth(), Game.height / assets.background:getHeight())
+    end
 
     if Game.state == "menu" then
         love.graphics.setColor(0, 0, 0, 0.65)
