@@ -259,45 +259,36 @@ local function drawDiscoBackground(level)
     love.graphics.setColor(palette.base[1], palette.base[2], palette.base[3], 1)
     love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
 
-    love.graphics.setColor(palette.secondary[1], palette.secondary[2], palette.secondary[3], 0.14)
-    love.graphics.rectangle("fill", 0, 0, Game.width, 410)
-    love.graphics.setColor(palette.primary[1], palette.primary[2], palette.primary[3], 0.18)
-    love.graphics.rectangle("fill", 0, 410, Game.width, 35)
-
-    for index = 0, 5 do
-        local x = (index + 0.5) * Game.width / 6
-        local sweep = math.sin(time * (0.7 + level * 0.08) + index * 1.8) * 170
-        love.graphics.setColor(palette.primary[1], palette.primary[2], palette.primary[3], 0.08)
-        love.graphics.polygon("fill", x - 35, 0, x + 35, 0, x + 190 + sweep, 435, x - 190 + sweep, 435)
-        love.graphics.setColor(palette.secondary[1], palette.secondary[2], palette.secondary[3], 0.35)
-        love.graphics.circle("fill", x + sweep * 0.35, 105 + math.sin(time + index) * 25, 24 + level * 2)
-    end
-
-    for index = 1, 24 do
-        local x = index * 57 + math.sin(time * 1.8 + index) * 8
-        local height = 18 + (math.sin(time * 4 + index * 0.9) + 1) * (12 + level * 3)
-        local alpha = 0.2 + (math.sin(time * 5 + index) + 1) * 0.12
-        love.graphics.setColor(palette.primary[1], palette.primary[2], palette.primary[3], alpha)
-        love.graphics.rectangle("fill", x, 405 - height, 22, height)
-    end
-
-    local tileWidth = 80
-    local tileHeight = 42
-    for row = 0, 6 do
-        for column = 0, 15 do
+    local tileSize = 64
+    local firstRow = 1
+    local lastRow = math.ceil(Game.height / tileSize)
+    local lastColumn = math.ceil(Game.width / tileSize)
+    for row = firstRow, lastRow do
+        for column = 0, lastColumn do
             local pulse = math.sin(time * 4.5 + row * 0.8 + column * 1.35 + level)
             local alternate = (row + column + level) % 2 == 0
             local color = alternate and palette.primary or palette.secondary
-            local brightness = 0.12 + math.max(0, pulse) * 0.42
+            local brightness = 0.1 + math.max(0, pulse) * 0.32
+            local x = column * tileSize
+            local y = row * tileSize
             love.graphics.setColor(color[1], color[2], color[3], brightness)
-            love.graphics.rectangle("fill", column * tileWidth + 2, 440 + row * tileHeight + 2, tileWidth - 4, tileHeight - 4)
-            love.graphics.setColor(color[1], color[2], color[3], 0.32)
-            love.graphics.rectangle("line", column * tileWidth, 440 + row * tileHeight, tileWidth, tileHeight)
+            love.graphics.rectangle("fill", x + 2, y + 2, tileSize - 4, tileSize - 4)
+            love.graphics.setColor(color[1], color[2], color[3], 0.25)
+            love.graphics.rectangle("line", x, y, tileSize, tileSize)
         end
     end
 
-    love.graphics.setColor(1, 1, 1, 0.08)
-    love.graphics.rectangle("fill", 0, 438, Game.width, 4)
+    for index = 0, 7 do
+        local x = (index + 0.5) * Game.width / 8
+        local y = 210 + math.sin(time * 0.8 + index * 1.7) * 90
+        local radius = 70 + level * 5 + math.sin(time * 2 + index) * 12
+        local color = index % 2 == 0 and palette.primary or palette.secondary
+        love.graphics.setColor(color[1], color[2], color[3], 0.07)
+        love.graphics.circle("fill", x, y, radius)
+    end
+
+    love.graphics.setColor(1, 1, 1, 0.16)
+    love.graphics.rectangle("line", 8, 63, Game.width - 16, Game.height - 71)
 end
 
 function love.load()
