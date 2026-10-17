@@ -171,8 +171,8 @@ local function spawnCoin()
     return {
         x = love.math.random(80, Game.width - 80),
         y = love.math.random(120, Game.height - 80),
-        width = image:getWidth() * 0.9,
-        height = image:getHeight() * 0.9,
+        width = image:getWidth() * 1.3,
+        height = image:getHeight() * 1.3,
     }
 end
 
@@ -580,8 +580,17 @@ function love.draw()
         love.graphics.setColor(1, 1, 1)
         drawCentered("← → para selecionar    ENTER para começar", 610, assets.font)
     elseif Game.state == "playing" then
+        love.graphics.setColor(1, 1, 1, 1)
         for _, coin in ipairs(coins) do
             local image = currentFrame(assets.coins, 12)
+            love.graphics.setColor(1.0, 0.8, 0.1, 0.22)
+            love.graphics.circle(
+                "fill",
+                coin.x + coin.width / 2,
+                coin.y + coin.height / 2,
+                math.max(coin.width, coin.height) * 0.9
+            )
+            love.graphics.setColor(1, 1, 1, 1)
             love.graphics.draw(image, coin.x, coin.y, 0, coin.width / image:getWidth(), coin.height / image:getHeight())
         end
         for _, saw in ipairs(saws) do
