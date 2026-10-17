@@ -155,6 +155,10 @@ local function playerHitbox()
     }
 end
 
+local function playerCenter()
+    return player.x + player.renderWidth / 2, player.y + player.renderHeight / 2
+end
+
 local function play(sound)
     if sound then
         sound:stop()
@@ -430,12 +434,13 @@ function love.update(dt)
         horizontal = gamepadHorizontal
         vertical = gamepadVertical
     end
-    player.moving = horizontal ~= 0 or vertical ~= 0
-    if horizontal ~= 0 and vertical ~= 0 then
-        horizontal = horizontal * 0.707
-        vertical = vertical * 0.707
+    local movementLength = math.sqrt(horizontal * horizontal + vertical * vertical)
+    player.moving = movementLength > 0
+    if movementLength > 1 then
+        horizontal = horizontal / movementLength
+        vertical = vertical / movementLength
     end
-    if horizontal ~= 0 then
+    if math.abs(horizontal) > 0.01 then
         player.facing = horizontal
     end
 
@@ -481,10 +486,14 @@ function love.update(dt)
 end
 
 function love.draw()
-    local scaleX = love.graphics.getWidth() / Game.width
-    local scaleY = love.graphics.getHeight() / Game.height
+    local windowWidth = love.graphics.getWidth()
+    local windowHeight = love.graphics.getHeight()
+    local viewScale = math.min(windowWidth / Game.width, windowHeight / Game.height)
+    local viewOffsetX = (windowWidth - Game.width * viewScale) / 2
+    local viewOffsetY = (windowHeight - Game.height * viewScale) / 2
     love.graphics.push()
-    love.graphics.scale(scaleX, scaleY)
+    love.graphics.translate(viewOffsetX, viewOffsetY)
+    love.graphics.scale(viewScale, viewScale)
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(assets.background, 0, 0, 0, Game.width / assets.background:getWidth(), Game.height / assets.background:getHeight())
 
@@ -531,20 +540,16 @@ function love.draw()
             love.graphics.draw(image, saw.x, saw.y, 0, saw.width / image:getWidth(), saw.height / image:getHeight())
         end
         local image = playerImage()
-        local imageWidth = image:getWidth() * player.scale
-        local imageHeight = image:getHeight() * player.scale
-        local drawX = player.x + (player.renderWidth - imageWidth) / 2
-        local drawY = player.y + (player.renderHeight - imageHeight) / 2
-        if player.facing == -1 then
-            drawX = player.x + player.renderWidth - (player.renderWidth - imageWidth) / 2
-        end
+        local centerX, centerY = playerCenter()
         love.graphics.draw(
             image,
-            drawX,
-            drawY,
+            centerX,
+            centerY,
             0,
             player.scale * player.facing,
-            player.scale
+            player.scale,
+            image:getWidth() / 2,
+            image:getHeight() / 2
         )
         love.graphics.setColor(0, 0, 0, 0.7)
         love.graphics.rectangle("fill", 0, 0, Game.width, 55)
