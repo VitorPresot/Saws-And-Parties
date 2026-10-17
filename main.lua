@@ -15,6 +15,7 @@ local Game = {
     creditsTime = 0,
     endingTime = 0,
     bossTime = 0,
+    settingsIndex = 1,
 }
 
 local assets = {}
@@ -28,7 +29,8 @@ local gamepad
 local gamepadSelectionRepeat = 0
 
 local GAMEPAD_DEADZONE = 0.2
-local MENU_ITEMS = {"JOGAR", "MUSICA", "TELA CHEIA", "CREDITOS", "SAIR"}
+local MENU_ITEMS = {"JOGAR", "CONFIGURACOES", "CREDITOS", "SAIR"}
+local SETTINGS_ITEMS = {"MUSICA", "TELA CHEIA", "TECLAS", "CONTROLADOR", "VOLTAR"}
 local CREDITS = {
     "Vitor Presot",
     "Bruno Nunes",
@@ -178,6 +180,12 @@ local function playerCenter()
     return player.x + player.renderWidth / 2, player.y + player.renderHeight / 2
 end
 
+local function distance(x1, y1, x2, y2)
+    local dx = x2 - x1
+    local dy = y2 - y1
+    return math.sqrt(dx * dx + dy * dy)
+end
+
 local function play(sound)
     if sound then
         sound:stop()
@@ -195,7 +203,20 @@ local function stopMusic()
     assets.music = nil
 end
 
-local function playMusic(source)
+local playMusic
+
+local function ensureMusic(source)
+    if not Game.musicEnabled or not source then
+        return
+    end
+    if assets.music ~= source then
+        playMusic(source)
+    elseif not source:isPlaying() then
+        source:play()
+    end
+end
+
+playMusic = function(source)
     stopMusic()
     if Game.musicEnabled and source then
         source:setLooping(true)
@@ -205,7 +226,7 @@ local function playMusic(source)
 end
 
 local function playMenuMusic()
-    playMusic(assets.menuMusic)
+    ensureMusic(assets.menuMusic)
 end
 
 local function menuLabel(index)
@@ -228,19 +249,14 @@ local function activateMenuItem()
         Game.state = "select"
         stopMusic()
     elseif Game.menuIndex == 2 then
-        Game.musicEnabled = not Game.musicEnabled
-        if Game.musicEnabled then
-            playMenuMusic()
-        else
-            stopMusic()
-        end
+        Game.state = "settings"
+        Game.settingsIndex = 1
+        playMenuMusic()
     elseif Game.menuIndex == 3 then
-        love.window.setFullscreen(not love.window.getFullscreen())
-    elseif Game.menuIndex == 4 then
         Game.state = "credits"
         Game.creditsTime = 0
         playMenuMusic()
-    elseif Game.menuIndex == 5 then
+    elseif Game.menuIndex == 4 then
         love.event.quit()
     end
 end
@@ -254,6 +270,43 @@ local function moveMenuSelection(direction)
     end
 end
 
+local function settingsLabel(index)
+    if index == 1 then
+        return "MUSICA: " .. (Game.musicEnabled and "LIGADA" or "DESLIGADA")
+    elseif index == 2 then
+        return "TELA CHEIA: " .. (love.window.getFullscreen() and "LIGADA" or "DESLIGADA")
+    elseif index == 3 then
+        return "TECLAS"
+    elseif index == 4 then
+        return "CONTROLADOR"
+    end
+    return SETTINGS_ITEMS[index]
+end
+
+local function moveSettingsSelection(direction)
+    Game.settingsIndex = Game.settingsIndex + direction
+    if Game.settingsIndex < 1 then
+        Game.settingsIndex = #SETTINGS_ITEMS
+    elseif Game.settingsIndex > #SETTINGS_ITEMS then
+        Game.settingsIndex = 1
+    end
+end
+
+local function activateSettingsItem()
+    if Game.settingsIndex == 1 then
+        Game.musicEnabled = not Game.musicEnabled
+        if Game.musicEnabled then
+            playMenuMusic()
+        else
+            stopMusic()
+        end
+    elseif Game.settingsIndex == 2 then
+        love.window.setFullscreen(not love.window.getFullscreen())
+    elseif Game.settingsIndex == 5 then
+        goToMenu()
+    end
+end
+
 local function spawnCoin()
     local image = assets.coins[1]
     return {
@@ -264,17 +317,64 @@ local function spawnCoin()
     }
 end
 
-local function spawnSaw(index)
-    local image = assets.saws[1]
-    local speed = 125 + Game.level * 30 + index * 12
+local function sawOverlapsAny(saw, list)
+    for _, item in ipairs(list) do
+        if overlaps(saw, item) then
+            return true
+        end
+    end
+    return false
+end
+
+local function safeSawPosition(width, height, minimumDistance)
+    local playerBox = playerHitbox()
+    for _ = 1, 80 do
+        local candidate = {
+            x = love.math.random(70, Game.width - width - 70),
+            y = love.math.random(90, Game.height - height - 45),
+            width = width,
+            height = height,
+        }
+        local candidateCenterX = candidate.x + width / 2
+        local candidateCenterY = candidate.y + height / 2
+        local playerCenterX, playerCenterY = playerCenter()
+        if distance(candidateCenterX, candidateCenterY, playerCenterX, playerCenterY) >= minimumDistance
+            and not sawOverlapsAny(candidate, coins)
+            and not sawOverlapsAny(candidate, saws) then
+            return candidate
+        end
+    end
     return {
-        x = love.math.random(100, Game.width - 150),
-        y = love.math.random(100, Game.height - 150),
-        width = image:getWidth() * 0.55,
-        height = image:getHeight() * 0.55,
-        vx = love.math.random() < 0.5 and speed or -speed,
-        vy = love.math.random() < 0.5 and speed or -speed,
+        x = Game.width - width - 90,
+        y = 100,
+        width = width,
+        height = height,
     }
+end
+
+local function spawnSaw(index, isStatic)
+    local image = assets.saws[1]
+    local width = image:getWidth() * 0.55
+    local height = image:getHeight() * 0.55
+    local saw = safeSawPosition(width, height, isStatic and 170 or 230)
+    saw.static = isStatic
+    saw.vx = 0
+    saw.vy = 0
+    if not isStatic then
+        local playerCenterX, playerCenterY = playerCenter()
+        local sawCenterX = saw.x + width / 2
+        local sawCenterY = saw.y + height / 2
+        local dx = sawCenterX - playerCenterX
+        local dy = sawCenterY - playerCenterY
+        local length = math.max(1, math.sqrt(dx * dx + dy * dy))
+        local speed = 125 + Game.level * 30 + index * 12
+        local direction = love.math.random() < 0.5 and -1 or 1
+        local awayX = dx / length
+        local awayY = dy / length
+        saw.vx = awayX * speed + (-awayY * speed * 0.35 * direction)
+        saw.vy = awayY * speed + (awayX * speed * 0.35 * direction)
+    end
+    return saw
 end
 
 local function startLevel(level)
@@ -313,7 +413,10 @@ local function startLevel(level)
         table.insert(coins, spawnCoin())
     end
     for index = 1, level do
-        table.insert(saws, spawnSaw(index))
+        table.insert(saws, spawnSaw(index, false))
+    end
+    for index = 1, math.min(5, 1 + math.floor(level / 2)) do
+        table.insert(saws, spawnSaw(index, true))
     end
 
     playMusic(assets.musicTracks[((level - 1) % #assets.musicTracks) + 1])
@@ -397,16 +500,19 @@ local function drawMenuBackground()
         local x = (index + 0.5) * Game.width / 8
         local y = 110 + math.sin(time * 0.8 + index) * 65
         local radius = 80 + math.sin(time * 1.7 + index * 1.3) * 22
-        local red = (index % 2 == 0) and 0.95 or 0.18
-        local blue = (index % 2 == 0) and 0.35 or 0.95
-        love.graphics.setColor(red, 0.08, blue, 0.11)
+        local progress = (math.sin(time * 0.45 + index * 0.55) + 1) / 2
+        local red = 0.25 + progress * 0.7
+        local green = 0.04 + (1 - progress) * 0.18
+        local blue = 0.35 + (1 - progress) * 0.6
+        love.graphics.setColor(red, green, blue, 0.14)
         love.graphics.circle("fill", x, y, radius)
     end
 
     for row = 0, 8 do
         for column = 0, 15 do
+            local progress = (math.sin(time * 0.35) + 1) / 2
             local pulse = math.max(0, math.sin(time * 3.5 + row + column * 0.8))
-            local color = (row + column) % 2 == 0 and {0.9, 0.08, 0.5} or {0.08, 0.7, 1.0}
+            local color = {0.15 + progress * 0.75, 0.06 + (1 - progress) * 0.58, 0.4 + (1 - progress) * 0.55}
             love.graphics.setColor(color[1], color[2], color[3], 0.08 + pulse * 0.18)
             love.graphics.rectangle("fill", column * 80 + 2, 360 + row * 45 + 2, 76, 41)
         end
@@ -499,6 +605,19 @@ function love.keypressed(key)
         return
     end
 
+    if Game.state == "settings" then
+        if key == "up" or key == "w" then
+            moveSettingsSelection(-1)
+        elseif key == "down" or key == "s" then
+            moveSettingsSelection(1)
+        elseif key == "return" or key == "space" then
+            activateSettingsItem()
+        elseif key == "escape" then
+            goToMenu()
+        end
+        return
+    end
+
     if Game.state == "select" then
         if key == "left" or key == "a" then
             Game.selectedCharacter = 1
@@ -515,8 +634,8 @@ function love.keypressed(key)
     if (Game.state == "playing" or Game.state == "boss") and key == "escape" then
         Game.paused = not Game.paused
         if Game.paused then
-            assets.music:pause()
-        else
+            if assets.music then assets.music:pause() end
+        elseif assets.music then
             assets.music:play()
         end
         return
@@ -561,6 +680,16 @@ function love.gamepadpressed(joystick, button)
         elseif button == "b" or button == "back" then
             love.event.quit()
         end
+    elseif Game.state == "settings" then
+        if button == "dpup" or button == "leftshoulder" then
+            moveSettingsSelection(-1)
+        elseif button == "dpdown" or button == "rightshoulder" then
+            moveSettingsSelection(1)
+        elseif gamepadConfirm(button) then
+            activateSettingsItem()
+        elseif button == "b" or button == "back" then
+            goToMenu()
+        end
     elseif Game.state == "select" then
         if button == "dpleft" or button == "leftshoulder" then
             goToPreviousCharacter()
@@ -569,14 +698,14 @@ function love.gamepadpressed(joystick, button)
         elseif gamepadConfirm(button) then
             startLevel(1)
         elseif button == "b" or button == "back" then
-            Game.state = "menu"
+            goToMenu()
         end
     elseif Game.state == "playing" or Game.state == "boss" then
         if button == "start" or button == "back" then
             Game.paused = not Game.paused
             if Game.paused then
-                assets.music:pause()
-            else
+                if assets.music then assets.music:pause() end
+            elseif assets.music then
                 assets.music:play()
             end
         end
@@ -787,7 +916,7 @@ function love.update(dt)
         if overlaps(playerHitbox(), saw) then
             Game.state = "gameover"
             Game.statusMessage = "Game Over!"
-            assets.music:stop()
+            stopMusic()
             return
         end
     end
@@ -831,12 +960,37 @@ function love.draw()
         drawCentered("DISCOTECA DE SOBREVIVENCIA", 135, assets.font)
         for index = 1, #MENU_ITEMS do
             local selected = index == Game.menuIndex
+            if selected then
+                love.graphics.setColor(0.1, 0.8, 1, 0.18)
+                love.graphics.rectangle("fill", 380, 235 + index * 48, 520, 44, 8, 8)
+            end
             love.graphics.setColor(selected and 1 or 0.65, selected and 0.85 or 0.65, selected and 0.2 or 0.9, 1)
             love.graphics.printf(menuLabel(index), 420, 245 + index * 48, 440, "center")
         end
         love.graphics.setColor(1, 1, 1, 0.8)
-        drawCentered("Setas/WASD ou D-pad para navegar | ENTER/A para confirmar", 620, assets.font)
-        drawCentered(Game.controllerName and ("Controle detectado: " .. Game.controllerName) or "Nenhum controle detectado", 665, assets.font)
+        drawCentered("Setas/WASD ou D-pad para navegar | ENTER/A confirmar", 610, assets.font)
+        drawCentered(Game.controllerName and ("Controle detectado: " .. Game.controllerName) or "Nenhum controle detectado", 655, assets.font)
+    elseif Game.state == "settings" then
+        love.graphics.setColor(1, 1, 1)
+        drawCentered("CONFIGURACOES", 75, assets.titleFont)
+        drawCentered("Ajuste a experiencia da pista", 140, assets.font)
+        for index = 1, #SETTINGS_ITEMS do
+            local selected = index == Game.settingsIndex
+            if selected then
+                love.graphics.setColor(0.95, 0.2, 0.65, 0.2)
+                love.graphics.rectangle("fill", 360, 205 + index * 58, 560, 48, 8, 8)
+            end
+            love.graphics.setColor(selected and 1 or 0.7, selected and 0.85 or 0.7, selected and 0.25 or 0.95, 1)
+            love.graphics.printf(settingsLabel(index), 380, 216 + index * 58, 520, "center")
+        end
+        love.graphics.setColor(1, 1, 1, 0.8)
+        if Game.settingsIndex == 3 then
+            drawCentered("Mover: Setas ou WASD | Pausar: ESC | Tela cheia: F11", 585, assets.font)
+        elseif Game.settingsIndex == 4 then
+            drawCentered(Game.controllerName and ("Detectado: " .. Game.controllerName .. " | Analógico esquerdo/D-pad")
+                or "Nenhum controlador detectado", 585, assets.font)
+        end
+        drawCentered("ENTER/A selecionar | ESC/B voltar", 650, assets.font)
     elseif Game.state == "select" then
         love.graphics.setColor(1, 1, 1)
         drawCentered("ESCOLHA SEU PERSONAGEM", 65, assets.titleFont)
@@ -849,17 +1003,21 @@ function love.draw()
         for index, character in ipairs(characters) do
             local x = index == 1 and 350 or 850
             local selected = index == Game.selectedCharacter
+            local cardY = 205
             love.graphics.setColor(selected and 1 or 0.55, selected and 0.85 or 0.55, 0.15, 1)
-            love.graphics.rectangle("line", x - 135, 220, 270, 310, 5)
+            love.graphics.setLineWidth(selected and 5 or 2)
+            love.graphics.rectangle("line", x - 150, cardY, 300, 340, 8, 8)
             love.graphics.setColor(1, 1, 1)
-            local image = assets.characters[index].walk[1]
-            local spriteScale = math.min(220 / image:getWidth(), 220 / image:getHeight())
-            love.graphics.draw(image, x - image:getWidth() * spriteScale / 2, 270, 0, spriteScale, spriteScale)
-            drawCentered("", 0, assets.font)
-            love.graphics.printf(character.name, x - 135, 500, 270, "center")
+            local image = assets.characters[index].idle
+            local spriteScale = math.min(190 / image:getWidth(), 220 / image:getHeight())
+            love.graphics.draw(image, x, cardY + 150, 0, spriteScale, spriteScale, image:getWidth() / 2, image:getHeight() / 2)
+            love.graphics.printf(character.name, x - 135, 475, 270, "center")
+            love.graphics.setColor(1, 1, 1, 0.65)
+            love.graphics.printf(index == 1 and "Equilibrio e agilidade" or "Forca e presenca", x - 125, 515, 250, "center")
         end
+        love.graphics.setLineWidth(1)
         love.graphics.setColor(1, 1, 1)
-        drawCentered("← → para selecionar    ENTER para começar", 610, assets.font)
+        drawCentered("← → / analógico para selecionar | ENTER/A começar", 610, assets.font)
     elseif Game.state == "credits" then
         love.graphics.setColor(1, 1, 1)
         drawCentered("CREDITOS", 90, assets.titleFont)
@@ -920,7 +1078,7 @@ function love.draw()
             centerX,
             centerY,
             0,
-            player.scale * player.facing,
+            player.facing < 0 and -player.scale or player.scale,
             player.scale,
             image:getWidth() / 2,
             image:getHeight() / 2
