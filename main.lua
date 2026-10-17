@@ -8,6 +8,7 @@ local Game = {
     timeLeft = 35,
     paused = false,
     animationTime = 0,
+    countdown = 0,
 }
 
 local assets = {}
@@ -190,11 +191,12 @@ local function spawnSaw(index)
 end
 
 local function startLevel(level)
-    Game.state = "playing"
+    Game.state = "countdown"
     Game.level = level
     Game.coins = 0
     Game.timeLeft = level == 1 and 35 or 30
     Game.paused = false
+    Game.countdown = 3
     local characterAssets = assets.characters[Game.selectedCharacter]
     local spriteScale = 0.35
     local renderWidth = characterAssets.idle:getWidth()
@@ -226,6 +228,10 @@ local function startLevel(level)
         table.insert(saws, spawnSaw(index))
     end
 
+    if assets.music then
+        assets.music:stop()
+    end
+    assets.music = assets.musicTracks[((level - 1) % #assets.musicTracks) + 1]
     if assets.music then
         assets.music:setLooping(true)
         assets.music:play()
@@ -303,7 +309,10 @@ function love.load()
     assets.saws = loadImages(sawFrames)
     assets.font = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 28)
     assets.titleFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 52)
-    assets.music = love.audio.newSource("sounds/musicaJogo/musicaJogo.mp3", "stream")
+    assets.musicTracks = {
+        love.audio.newSource("sounds/Final_Quarter_Dash.mp3", "stream"),
+        love.audio.newSource("sounds/Frame_Perfect.mp3", "stream"),
+    }
     assets.coinSound = love.audio.newSource("sounds/somMoeda/somMoeda.mp3", "static")
     refreshGamepad()
 end
@@ -439,6 +448,16 @@ function love.update(dt)
         end
     end
 
+    if Game.state == "countdown" then
+        Game.animationTime = Game.animationTime + dt
+        Game.countdown = Game.countdown - dt
+        if Game.countdown <= 0 then
+            Game.countdown = 0
+            Game.state = "playing"
+        end
+        return
+    end
+
     if Game.state ~= "playing" or Game.paused then
         return
     end
@@ -540,7 +559,7 @@ function love.draw()
     love.graphics.translate(viewOffsetX, viewOffsetY)
     love.graphics.scale(viewScale, viewScale)
     love.graphics.setColor(1, 1, 1)
-    if Game.state == "playing" then
+    if Game.state == "playing" or Game.state == "countdown" then
         drawDiscoBackground(Game.level)
     else
         love.graphics.draw(assets.background, 0, 0, 0, Game.width / assets.background:getWidth(), Game.height / assets.background:getHeight())
@@ -579,7 +598,7 @@ function love.draw()
         end
         love.graphics.setColor(1, 1, 1)
         drawCentered("← → para selecionar    ENTER para começar", 610, assets.font)
-    elseif Game.state == "playing" then
+    elseif Game.state == "playing" or Game.state == "countdown" then
         love.graphics.setColor(1, 1, 1, 1)
         for _, coin in ipairs(coins) do
             local image = currentFrame(assets.coins, 12)
@@ -616,7 +635,13 @@ function love.draw()
         love.graphics.print(("Fase: %d/4"):format(Game.level), 24, 14)
         love.graphics.printf(("Moedas: %d/12"):format(Game.coins), 0, 14, Game.width, "center")
         love.graphics.printf(("Tempo: %d"):format(math.ceil(Game.timeLeft)), -24, 14, Game.width, "right")
-        if Game.paused then
+        if Game.state == "countdown" then
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
+            love.graphics.setColor(1, 1, 1, 1)
+            drawCentered("PREPARE-SE", 220, assets.font)
+            drawCentered(tostring(math.ceil(Game.countdown)), 275, assets.titleFont)
+        elseif Game.paused then
             love.graphics.setColor(0, 0, 0, 0.7)
             love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
             love.graphics.setColor(1, 1, 1)

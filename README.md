@@ -38,3 +38,7 @@ eixos/botões brutos como fallback para controles genéricos:
 Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do
 tempo acabar para avançar pelas quatro fases. Colidir com uma serra ou deixar
 o cronômetro terminar retorna à seleção.
+
+Antes de cada fase, uma contagem regressiva de 3, 2 e 1 prepara o jogador.
+As fases alternam entre as músicas `Final_Quarter_Dash.mp3` e
+`Frame_Perfect.mp3`, ambas reproduzidas em loop.
