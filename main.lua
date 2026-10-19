@@ -20,6 +20,7 @@ local Game = {
 }
 
 local assets = {}
+local spriteBounds = {}
 local player
 local coins = {}
 local saws = {}
@@ -84,7 +85,34 @@ local sawFrames = {
 }
 
 local function loadImage(path)
-    return love.graphics.newImage(path)
+    local image = love.graphics.newImage(path)
+    local data = love.image.newImageData(path)
+    local width, height = data:getWidth(), data:getHeight()
+    local minX, minY = width, height
+    local maxX, maxY = -1, -1
+
+    for y = 0, height - 1 do
+        for x = 0, width - 1 do
+            local alpha = select(4, data:getPixel(x, y))
+            if alpha > 0.05 then
+                minX = math.min(minX, x)
+                minY = math.min(minY, y)
+                maxX = math.max(maxX, x)
+                maxY = math.max(maxY, y)
+            end
+        end
+    end
+
+    if maxX < 0 then
+        minX, minY, maxX, maxY = 0, 0, width - 1, height - 1
+    end
+    spriteBounds[image] = {
+        x = minX,
+        y = minY,
+        width = maxX - minX + 1,
+        height = maxY - minY + 1,
+    }
+    return image
 end
 
 local function loadImages(paths)
@@ -171,11 +199,21 @@ local function playerImage()
 end
 
 local function playerHitbox()
+    local image = playerImage()
+    local bounds = spriteBounds[image]
+    local imageWidth = image:getWidth() * player.scale
+    local imageHeight = image:getHeight() * player.scale
+    local drawLeft = player.x + (player.renderWidth - imageWidth) / 2
+    local drawTop = player.y + (player.renderHeight - imageHeight) / 2
+    local hitboxX = bounds.x
+    if player.facing < 0 then
+        hitboxX = image:getWidth() - bounds.x - bounds.width
+    end
     return {
-        x = player.x + player.renderWidth * 0.32,
-        y = player.y + player.renderHeight * 0.18,
-        width = player.renderWidth * 0.36,
-        height = player.renderHeight * 0.72,
+        x = drawLeft + hitboxX * player.scale,
+        y = drawTop + bounds.y * player.scale,
+        width = bounds.width * player.scale,
+        height = bounds.height * player.scale,
     }
 end
 
