@@ -36,9 +36,11 @@ eixos/botões brutos como fallback para controles genéricos:
 | Voltar | B |
 | Pausar | Start ou Back |
 
-Durante as fases, Bruno usa `Espaço` para fazer um sprint de 0,5 segundo.
-Wallace usa `Espaço` para ficar semitransparente e intangível por 0,5 segundo.
+Durante as fases, Bruno usa `Espaço` para ativar um soco por 0,5 segundo.
+A primeira serra que acertá-lo durante essa janela é repelida para longe.
+Wallace usa `Espaço` para ficar semitransparente e intangível por 1,5 segundo.
 Os botões `X` ou `Y` do gamepad ativam a habilidade do personagem.
+As habilidades possuem 6 segundos de recarga.
 
 Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do
 tempo acabar para avançar pelas seis fases. Depois da sexta fase, enfrente o

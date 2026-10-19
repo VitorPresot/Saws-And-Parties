@@ -187,8 +187,8 @@ local function activateAbility()
     if not player or player.abilityTimer > 0 or player.abilityCooldown > 0 then
         return
     end
-    player.abilityTimer = 0.5
-    player.abilityCooldown = 2
+    player.abilityTimer = Game.selectedCharacter == 1 and 0.5 or 1.5
+    player.abilityCooldown = 6
     player.abilityActive = true
 end
 
@@ -816,9 +816,6 @@ local function movePlayer(dt)
         player.facing = horizontal
     end
     local speed = 235
-    if player.abilityActive and Game.selectedCharacter == 1 then
-        speed = speed * 2.35
-    end
     player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.renderWidth)
     player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.renderHeight)
 end
@@ -826,6 +823,22 @@ end
 local function updateAbility(dt)
     if not player then
         return
+    end
+
+    local function repelSawFromPlayer(saw)
+        local playerCenterX, playerCenterY = playerCenter()
+        local sawCenterX = saw.x + saw.width / 2
+        local sawCenterY = saw.y + saw.height / 2
+        local dx = sawCenterX - playerCenterX
+        local dy = sawCenterY - playerCenterY
+        local length = math.max(1, math.sqrt(dx * dx + dy * dy))
+        local force = 560
+        saw.vx = (dx / length) * force
+        saw.vy = (dy / length) * force
+        saw.x = saw.x + (dx / length) * 18
+        saw.y = saw.y + (dy / length) * 18
+        player.abilityActive = false
+        player.abilityTimer = 0
     end
     player.abilityCooldown = math.max(0, player.abilityCooldown - dt)
     if player.abilityTimer > 0 then
@@ -871,12 +884,15 @@ local function updateBoss(dt)
         saw.life = saw.life + dt
         if saw.life > 7 or saw.x < -80 or saw.x > Game.width + 80 or saw.y < -80 or saw.y > Game.height + 80 then
             table.remove(bossSaws, index)
-        elseif not (Game.selectedCharacter == 2 and player.abilityActive)
-            and overlaps(playerHitbox(), saw) then
-            Game.state = "gameover"
-            Game.statusMessage = "A motosserra venceu!"
-            stopMusic()
-            return
+        elseif overlaps(playerHitbox(), saw) then
+            if Game.selectedCharacter == 1 and player.abilityActive then
+                repelSawFromPlayer(saw)
+            elseif not (Game.selectedCharacter == 2 and player.abilityActive) then
+                Game.state = "gameover"
+                Game.statusMessage = "A motosserra venceu!"
+                stopMusic()
+                return
+            end
         end
     end
 
@@ -958,12 +974,15 @@ function love.update(dt)
             saw.vy = -saw.vy
             saw.y = clamp(saw.y, 60, Game.height - saw.height)
         end
-        if not (Game.selectedCharacter == 2 and player.abilityActive)
-            and overlaps(playerHitbox(), saw) then
-            Game.state = "gameover"
-            Game.statusMessage = "Game Over!"
-            stopMusic()
-            return
+        if overlaps(playerHitbox(), saw) then
+            if Game.selectedCharacter == 1 and player.abilityActive then
+                repelSawFromPlayer(saw)
+            elseif not (Game.selectedCharacter == 2 and player.abilityActive) then
+                Game.state = "gameover"
+                Game.statusMessage = "Game Over!"
+                stopMusic()
+                return
+            end
         end
     end
 
@@ -1059,7 +1078,7 @@ function love.draw()
             love.graphics.draw(image, x, cardY + 150, 0, spriteScale, spriteScale, image:getWidth() / 2, image:getHeight() / 2)
             love.graphics.printf(character.name, x - 135, 475, 270, "center")
             love.graphics.setColor(1, 1, 1, 0.65)
-            love.graphics.printf(index == 1 and "Sprint" or "Intangivel", x - 125, 515, 250, "center")
+            love.graphics.printf(index == 1 and "Soco" or "Intangivel", x - 125, 515, 250, "center")
         end
         love.graphics.setLineWidth(1)
         love.graphics.setColor(1, 1, 1)
@@ -1145,7 +1164,7 @@ function love.draw()
         love.graphics.printf(("Moedas: %d/12"):format(Game.coins), 0, 14, Game.width, "center")
         local displayedTime = Game.state == "boss" and Game.bossTime or Game.timeLeft
         love.graphics.printf(("Tempo: %d"):format(math.ceil(displayedTime)), -24, 14, Game.width, "right")
-        local abilityLabel = Game.selectedCharacter == 1 and "Sprint" or "Intangivel"
+        local abilityLabel = Game.selectedCharacter == 1 and "Soco" or "Intangivel"
         local abilityStatus = player.abilityActive and "ATIVA"
             or (player.abilityCooldown > 0 and ("%.1fs"):format(player.abilityCooldown) or "PRONTA")
         love.graphics.setColor(1, 0.85, 0.25, 1)
