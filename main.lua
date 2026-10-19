@@ -32,6 +32,8 @@ local GAMEPAD_DEADZONE = 0.2
 local MENU_ITEMS = {"JOGAR", "CONFIGURACOES", "CREDITOS", "SAIR"}
 local SETTINGS_ITEMS = {"MUSICA", "TELA CHEIA", "TECLAS", "CONTROLADOR", "VOLTAR"}
 local CREDITS = {
+    "Antony Rafael",
+    "Wallace Pedroso",
     "Vitor Presot",
     "Bruno Nunes",
     "Vinicius Lucena",
@@ -1032,8 +1034,8 @@ function love.draw()
         drawCentered("FIM DE JOGO", 115, assets.titleFont)
         drawCentered("A pista foi salva e a festa continua!", 220, assets.font)
         drawCentered("Obrigado por jogar Saws and Parties", 285, assets.font)
-        drawCentered("Vitor Presot, Bruno Nunes, Vinicius Lucena,", 390, assets.font)
-        drawCentered("Rafael Lisboa, Luis Gustavo e Lucas Mota", 430, assets.font)
+        drawCentered("Antony Rafael, Vitor Presot, Bruno Nunes, Vinicius Lucena,", 390, assets.font)
+        drawCentered("Rafael Lisboa, Wallace Pedroso, Luis Gustavo e Lucas Mota", 430, assets.font)
         love.graphics.setColor(1, 1, 1, 0.8)
         drawCentered("ENTER/A ou ESC/B para pular", 650, assets.font)
     elseif Game.state == "playing" or Game.state == "countdown"
