@@ -16,6 +16,7 @@ local Game = {
     endingTime = 0,
     bossTime = 0,
     settingsIndex = 1,
+    abilityCooldown = 0,
 }
 
 local assets = {}
@@ -180,6 +181,15 @@ end
 
 local function playerCenter()
     return player.x + player.renderWidth / 2, player.y + player.renderHeight / 2
+end
+
+local function activateAbility()
+    if not player or player.abilityTimer > 0 or player.abilityCooldown > 0 then
+        return
+    end
+    player.abilityTimer = 0.5
+    player.abilityCooldown = 2
+    player.abilityActive = true
 end
 
 local function distance(x1, y1, x2, y2)
@@ -407,6 +417,9 @@ local function startLevel(level)
         scale = spriteScale,
         facing = 1,
         moving = false,
+        abilityTimer = 0,
+        abilityCooldown = 0,
+        abilityActive = false,
     }
     coins = {}
     saws = {}
@@ -643,6 +656,11 @@ function love.keypressed(key)
         return
     end
 
+    if (Game.state == "playing" or Game.state == "boss") and key == "space" then
+        activateAbility()
+        return
+    end
+
     if Game.state == "credits" and (key == "return" or key == "space" or key == "escape") then
         goToMenu()
     elseif Game.state == "ending" and (key == "return" or key == "space" or key == "escape") then
@@ -703,7 +721,9 @@ function love.gamepadpressed(joystick, button)
             goToMenu()
         end
     elseif Game.state == "playing" or Game.state == "boss" then
-        if button == "start" or button == "back" then
+        if button == "x" or button == "y" then
+            activateAbility()
+        elseif button == "start" or button == "back" then
             Game.paused = not Game.paused
             if Game.paused then
                 if assets.music then assets.music:pause() end
@@ -729,6 +749,10 @@ function love.joystickpressed(joystick, button)
         love.gamepadpressed(joystick, "a")
     elseif button == 2 then
         love.gamepadpressed(joystick, "b")
+    elseif button == 3 then
+        love.gamepadpressed(joystick, "x")
+    elseif button == 4 then
+        love.gamepadpressed(joystick, "y")
     elseif button == 7 then
         love.gamepadpressed(joystick, "back")
     elseif button == 8 then
@@ -792,8 +816,24 @@ local function movePlayer(dt)
         player.facing = horizontal
     end
     local speed = 235
+    if player.abilityActive and Game.selectedCharacter == 1 then
+        speed = speed * 2.35
+    end
     player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.renderWidth)
     player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.renderHeight)
+end
+
+local function updateAbility(dt)
+    if not player then
+        return
+    end
+    player.abilityCooldown = math.max(0, player.abilityCooldown - dt)
+    if player.abilityTimer > 0 then
+        player.abilityTimer = math.max(0, player.abilityTimer - dt)
+        if player.abilityTimer == 0 then
+            player.abilityActive = false
+        end
+    end
 end
 
 local function spawnBossWave()
@@ -831,7 +871,8 @@ local function updateBoss(dt)
         saw.life = saw.life + dt
         if saw.life > 7 or saw.x < -80 or saw.x > Game.width + 80 or saw.y < -80 or saw.y > Game.height + 80 then
             table.remove(bossSaws, index)
-        elseif overlaps(playerHitbox(), saw) then
+        elseif not (Game.selectedCharacter == 2 and player.abilityActive)
+            and overlaps(playerHitbox(), saw) then
             Game.state = "gameover"
             Game.statusMessage = "A motosserra venceu!"
             stopMusic()
@@ -888,6 +929,7 @@ function love.update(dt)
     end
 
     if Game.state == "boss" and not Game.paused then
+        updateAbility(dt)
         updateBoss(dt)
         return
     end
@@ -896,6 +938,7 @@ function love.update(dt)
         return
     end
 
+    updateAbility(dt)
     Game.timeLeft = Game.timeLeft - dt
     if Game.timeLeft <= 0 then
         returnToSelection("O tempo acabou. Tente novamente!")
@@ -915,7 +958,8 @@ function love.update(dt)
             saw.vy = -saw.vy
             saw.y = clamp(saw.y, 60, Game.height - saw.height)
         end
-        if overlaps(playerHitbox(), saw) then
+        if not (Game.selectedCharacter == 2 and player.abilityActive)
+            and overlaps(playerHitbox(), saw) then
             Game.state = "gameover"
             Game.statusMessage = "Game Over!"
             stopMusic()
@@ -1015,7 +1059,7 @@ function love.draw()
             love.graphics.draw(image, x, cardY + 150, 0, spriteScale, spriteScale, image:getWidth() / 2, image:getHeight() / 2)
             love.graphics.printf(character.name, x - 135, 475, 270, "center")
             love.graphics.setColor(1, 1, 1, 0.65)
-            love.graphics.printf(index == 1 and "Equilibrio e agilidade" or "Forca e presenca", x - 125, 515, 250, "center")
+            love.graphics.printf(index == 1 and "Sprint" or "Intangivel", x - 125, 515, 250, "center")
         end
         love.graphics.setLineWidth(1)
         love.graphics.setColor(1, 1, 1)
@@ -1075,6 +1119,11 @@ function love.draw()
         end
         local image = playerImage()
         local centerX, centerY = playerCenter()
+        if Game.selectedCharacter == 2 and player.abilityActive then
+            love.graphics.setColor(1, 1, 1, 0.42)
+        else
+            love.graphics.setColor(1, 1, 1, 1)
+        end
         love.graphics.draw(
             image,
             centerX,
@@ -1085,6 +1134,7 @@ function love.draw()
             image:getWidth() / 2,
             image:getHeight() / 2
         )
+        love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setColor(0, 0, 0, 0.7)
         love.graphics.rectangle("fill", 0, 0, Game.width, 55)
         love.graphics.setColor(1, 1, 1)
@@ -1095,6 +1145,11 @@ function love.draw()
         love.graphics.printf(("Moedas: %d/12"):format(Game.coins), 0, 14, Game.width, "center")
         local displayedTime = Game.state == "boss" and Game.bossTime or Game.timeLeft
         love.graphics.printf(("Tempo: %d"):format(math.ceil(displayedTime)), -24, 14, Game.width, "right")
+        local abilityLabel = Game.selectedCharacter == 1 and "Sprint" or "Intangivel"
+        local abilityStatus = player.abilityActive and "ATIVA"
+            or (player.abilityCooldown > 0 and ("%.1fs"):format(player.abilityCooldown) or "PRONTA")
+        love.graphics.setColor(1, 0.85, 0.25, 1)
+        love.graphics.print(abilityLabel .. ": " .. abilityStatus, 24, 42)
         if Game.state == "countdown" or Game.state == "bossCountdown" then
             love.graphics.setColor(0, 0, 0, 0.5)
             love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)

@@ -18,6 +18,7 @@ love .
 | Mover | Setas ou WASD |
 | Selecionar personagem | Esquerda/Direita ou A/D |
 | Confirmar | Enter ou Espaço |
+| Habilidade | Espaço |
 | Pausar | Esc |
 | Reiniciar/voltar à seleção | F5 |
 | Tela cheia | F11 |
@@ -34,6 +35,10 @@ eixos/botões brutos como fallback para controles genéricos:
 | Confirmar | A ou Start |
 | Voltar | B |
 | Pausar | Start ou Back |
+
+Durante as fases, Bruno usa `Espaço` para fazer um sprint de 0,5 segundo.
+Wallace usa `Espaço` para ficar semitransparente e intangível por 0,5 segundo.
+Os botões `X` ou `Y` do gamepad ativam a habilidade do personagem.
 
 Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do
 tempo acabar para avançar pelas seis fases. Depois da sexta fase, enfrente o
