@@ -217,6 +217,36 @@ local function playerHitbox()
     }
 end
 
+local function sawHitbox(saw)
+    local image = currentFrame(assets.saws, 10)
+    local bounds = spriteBounds[image]
+    local scaleX = saw.width / image:getWidth()
+    local scaleY = saw.height / image:getHeight()
+    return {
+        x = saw.x + bounds.x * scaleX,
+        y = saw.y + bounds.y * scaleY,
+        width = bounds.width * scaleX,
+        height = bounds.height * scaleY,
+    }
+end
+
+local function circleOverlapsRectangle(circleX, circleY, radius, rectangle)
+    local closestX = clamp(circleX, rectangle.x, rectangle.x + rectangle.width)
+    local closestY = clamp(circleY, rectangle.y, rectangle.y + rectangle.height)
+    local dx = circleX - closestX
+    local dy = circleY - closestY
+    return dx * dx + dy * dy <= radius * radius
+end
+
+local function bossSawRadius(saw)
+    local image = currentFrame(assets.saws, 12)
+    local bounds = spriteBounds[image]
+    local scale = saw.width / image:getWidth()
+    local radiusX = bounds.width * scale / 2
+    local radiusY = bounds.height * scale / 2
+    return math.max(radiusX, radiusY)
+end
+
 local function playerCenter()
     return player.x + player.renderWidth / 2, player.y + player.renderHeight / 2
 end
@@ -922,7 +952,12 @@ local function updateBoss(dt)
         saw.life = saw.life + dt
         if saw.life > 7 or saw.x < -80 or saw.x > Game.width + 80 or saw.y < -80 or saw.y > Game.height + 80 then
             table.remove(bossSaws, index)
-        elseif overlaps(playerHitbox(), saw) then
+        elseif circleOverlapsRectangle(
+            saw.x + saw.width / 2,
+            saw.y + saw.height / 2,
+            bossSawRadius(saw),
+            playerHitbox()
+        ) then
             if Game.selectedCharacter == 1 and player.abilityActive then
                 repelSawFromPlayer(saw)
             elseif not (Game.selectedCharacter == 2 and player.abilityActive) then
@@ -1012,7 +1047,7 @@ function love.update(dt)
             saw.vy = -saw.vy
             saw.y = clamp(saw.y, 60, Game.height - saw.height)
         end
-        if overlaps(playerHitbox(), saw) then
+        if overlaps(playerHitbox(), sawHitbox(saw)) then
             if Game.selectedCharacter == 1 and player.abilityActive then
                 repelSawFromPlayer(saw)
             elseif not (Game.selectedCharacter == 2 and player.abilityActive) then
