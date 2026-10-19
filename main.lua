@@ -824,22 +824,6 @@ local function updateAbility(dt)
     if not player then
         return
     end
-
-    local function repelSawFromPlayer(saw)
-        local playerCenterX, playerCenterY = playerCenter()
-        local sawCenterX = saw.x + saw.width / 2
-        local sawCenterY = saw.y + saw.height / 2
-        local dx = sawCenterX - playerCenterX
-        local dy = sawCenterY - playerCenterY
-        local length = math.max(1, math.sqrt(dx * dx + dy * dy))
-        local force = 560
-        saw.vx = (dx / length) * force
-        saw.vy = (dy / length) * force
-        saw.x = saw.x + (dx / length) * 18
-        saw.y = saw.y + (dy / length) * 18
-        player.abilityActive = false
-        player.abilityTimer = 0
-    end
     player.abilityCooldown = math.max(0, player.abilityCooldown - dt)
     if player.abilityTimer > 0 then
         player.abilityTimer = math.max(0, player.abilityTimer - dt)
@@ -847,6 +831,22 @@ local function updateAbility(dt)
             player.abilityActive = false
         end
     end
+end
+
+local function repelSawFromPlayer(saw)
+    local playerCenterX, playerCenterY = playerCenter()
+    local sawCenterX = saw.x + saw.width / 2
+    local sawCenterY = saw.y + saw.height / 2
+    local dx = sawCenterX - playerCenterX
+    local dy = sawCenterY - playerCenterY
+    local length = math.max(1, math.sqrt(dx * dx + dy * dy))
+    local force = 560
+    saw.vx = (dx / length) * force
+    saw.vy = (dy / length) * force
+    saw.x = saw.x + (dx / length) * 18
+    saw.y = saw.y + (dy / length) * 18
+    player.abilityActive = false
+    player.abilityTimer = 0
 end
 
 local function spawnBossWave()
