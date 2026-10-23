@@ -8,26 +8,69 @@ local Game = {
     timeLeft = 35,
     paused = false,
     animationTime = 0,
+    countdown = 0,
+    countdownMode = "level",
+    menuIndex = 1,
+    musicEnabled = true,
+    creditsTime = 0,
+    endingTime = 0,
+    bossTime = 0,
+    settingsIndex = 1,
+    abilityCooldown = 0,
+    playModeIndex = 1,
+    playMode = "campaign",
+    mode = "campaign",
+    infiniteRound = 1,
+    infiniteGoal = 0,
+    uiTime = 0,
 }
 
 local assets = {}
+local spriteBounds = {}
 local player
+local player2
 local coins = {}
 local saws = {}
+local boss
+local bossSaws = {}
+local bossSpawnTimer = 0
 local gamepad
 local gamepadSelectionRepeat = 0
 
 local GAMEPAD_DEADZONE = 0.2
+local MENU_ITEMS = {"JOGAR", "CONFIGURACOES", "CREDITOS", "SAIR"}
+local PLAY_MODE_ITEMS = {"HISTORIA", "INFINITO", "2 JOGADORES", "VOLTAR"}
+local SETTINGS_ITEMS = {"MUSICA", "TELA CHEIA", "TECLAS", "CONTROLADOR", "VOLTAR"}
+local CREDITS = {
+    "Antony Rafael",
+    "Wallace Pedroso",
+    "Vitor Presot",
+    "Bruno Nunes",
+    "Vinicius Lucena",
+    "Rafael Lisboa",
+    "Luis Gustavo",
+    "Lucas Mota",
+}
 
 local characters = {
     {
         name = "Bruno",
-        idle = "sprites/sPersonagem2/b6bfda77-a011-4736-98f2-588dfa55bdf5.png",
+        idle = "sprites/bruno_sheet/walk_01.png",
         walk = {
-            "sprites/sPersonagemCorre2/f9944722-b388-4d94-bf51-8fce15ca37c0.png",
-            "sprites/sPersonagemCorre2/aecc1f46-2542-42b7-8267-12ccdd2b5520.png",
-            "sprites/sPersonagemCorre2/3f3b3436-6192-48e9-bc60-649e8f3a4234.png",
-            "sprites/sPersonagemCorre2/0e76ca2a-0dc4-48e9-b593-214800769c36.png",
+            "sprites/bruno_sheet/walk_01.png",
+            "sprites/bruno_sheet/walk_02.png",
+            "sprites/bruno_sheet/walk_03.png",
+            "sprites/bruno_sheet/walk_04.png",
+            "sprites/bruno_sheet/walk_05.png",
+            "sprites/bruno_sheet/walk_06.png",
+        },
+        punch = {
+            "sprites/bruno_sheet/punch_01.png",
+            "sprites/bruno_sheet/punch_02.png",
+            "sprites/bruno_sheet/punch_03.png",
+            "sprites/bruno_sheet/punch_04.png",
+            "sprites/bruno_sheet/punch_05.png",
+            "sprites/bruno_sheet/punch_06.png",
         },
     },
     {
@@ -39,6 +82,7 @@ local characters = {
             "sprites/sPersonagemCorre/70316423-7fe7-406f-9776-2f80ccbd2f1b.png",
             "sprites/sPersonagemCorre/98977d47-47d7-4ec7-83ef-ceeb4a410cd4.png",
         },
+        punch = {},
     },
 }
 
@@ -60,7 +104,34 @@ local sawFrames = {
 }
 
 local function loadImage(path)
-    return love.graphics.newImage(path)
+    local image = love.graphics.newImage(path)
+    local data = love.image.newImageData(path)
+    local width, height = data:getWidth(), data:getHeight()
+    local minX, minY = width, height
+    local maxX, maxY = -1, -1
+
+    for y = 0, height - 1 do
+        for x = 0, width - 1 do
+            local alpha = select(4, data:getPixel(x, y))
+            if alpha > 0.05 then
+                minX = math.min(minX, x)
+                minY = math.min(minY, y)
+                maxX = math.max(maxX, x)
+                maxY = math.max(maxY, y)
+            end
+        end
+    end
+
+    if maxX < 0 then
+        minX, minY, maxX, maxY = 0, 0, width - 1, height - 1
+    end
+    spriteBounds[image] = {
+        x = minX,
+        y = minY,
+        width = maxX - minX + 1,
+        height = maxY - minY + 1,
+    }
+    return image
 end
 
 local function loadImages(paths)
@@ -138,21 +209,85 @@ local function currentFrame(frames, fps)
     return frames[math.floor(Game.animationTime * fps) % #frames + 1]
 end
 
-local function playerImage()
-    local characterAssets = assets.characters[Game.selectedCharacter]
-    if player.moving then
+local function playerImage(target)
+    target = target or player
+    local characterAssets = assets.characters[target.character or Game.selectedCharacter]
+    if target.abilityActive and target.character == 1 and #characterAssets.punch > 0 then
+        return currentFrame(characterAssets.punch, 14)
+    elseif target.moving then
         return currentFrame(characterAssets.walk, 9)
     end
     return characterAssets.idle
 end
 
-local function playerHitbox()
+local function playerHitbox(target)
+    target = target or player
+    local image = playerImage(target)
+    local bounds = spriteBounds[image]
+    local imageWidth = image:getWidth() * player.scale
+    local imageHeight = image:getHeight() * player.scale
+    local drawLeft = target.x + (target.renderWidth - imageWidth) / 2
+    local drawTop = target.y + (target.renderHeight - imageHeight) / 2
+    local hitboxX = bounds.x
+    if target.facing < 0 then
+        hitboxX = image:getWidth() - bounds.x - bounds.width
+    end
     return {
-        x = player.x + player.renderWidth * 0.32,
-        y = player.y + player.renderHeight * 0.18,
-        width = player.renderWidth * 0.36,
-        height = player.renderHeight * 0.72,
+        x = drawLeft + hitboxX * player.scale,
+        y = drawTop + bounds.y * player.scale,
+        width = bounds.width * player.scale,
+        height = bounds.height * player.scale,
     }
+end
+
+local function sawHitbox(saw)
+    local image = currentFrame(assets.saws, 10)
+    local bounds = spriteBounds[image]
+    local scaleX = saw.width / image:getWidth()
+    local scaleY = saw.height / image:getHeight()
+    return {
+        x = saw.x + bounds.x * scaleX,
+        y = saw.y + bounds.y * scaleY,
+        width = bounds.width * scaleX,
+        height = bounds.height * scaleY,
+    }
+end
+
+local function circleOverlapsRectangle(circleX, circleY, radius, rectangle)
+    local closestX = clamp(circleX, rectangle.x, rectangle.x + rectangle.width)
+    local closestY = clamp(circleY, rectangle.y, rectangle.y + rectangle.height)
+    local dx = circleX - closestX
+    local dy = circleY - closestY
+    return dx * dx + dy * dy <= radius * radius
+end
+
+local function bossSawRadius(saw)
+    local image = currentFrame(assets.saws, 12)
+    local bounds = spriteBounds[image]
+    local scale = saw.width / image:getWidth()
+    local radiusX = bounds.width * scale / 2
+    local radiusY = bounds.height * scale / 2
+    return math.max(radiusX, radiusY)
+end
+
+local function playerCenter(target)
+    target = target or player
+    return target.x + target.renderWidth / 2, target.y + target.renderHeight / 2
+end
+
+local function activateAbility(target)
+    if not target or target.abilityTimer > 0 or target.abilityCooldown > 0 then
+        return
+    end
+    target.abilityTimer = target.character == 1 and 0.5 or 1.5
+    target.abilityCooldown = 6
+    target.abilityActive = true
+end
+
+local function distance(x1, y1, x2, y2)
+    local dx = x2 - x1
+    local dy = y2 - y1
+    return math.sqrt(dx * dx + dy * dy)
 end
 
 local function play(sound)
@@ -162,36 +297,321 @@ local function play(sound)
     end
 end
 
+local function stopMusic()
+    if assets.menuMusic then
+        assets.menuMusic:stop()
+    end
+    for _, track in ipairs(assets.musicTracks or {}) do
+        track:stop()
+    end
+    assets.music = nil
+end
+
+local playMusic
+
+local function ensureMusic(source)
+    if not Game.musicEnabled or not source then
+        return
+    end
+    if assets.music ~= source then
+        playMusic(source)
+    elseif not source:isPlaying() then
+        source:play()
+    end
+end
+
+playMusic = function(source)
+    stopMusic()
+    if Game.musicEnabled and source then
+        source:setLooping(true)
+        source:play()
+        assets.music = source
+    end
+end
+
+local function playMenuMusic()
+    ensureMusic(assets.menuMusic)
+end
+
+local function menuLabel(index)
+    return MENU_ITEMS[index]
+end
+
+local function movePlayModeSelection(direction)
+    Game.playModeIndex = Game.playModeIndex + direction
+    if Game.playModeIndex < 1 then
+        Game.playModeIndex = #PLAY_MODE_ITEMS
+    elseif Game.playModeIndex > #PLAY_MODE_ITEMS then
+        Game.playModeIndex = 1
+    end
+end
+
+local function activatePlayMode()
+    if Game.playModeIndex == 1 then
+        Game.mode = "campaign"
+        Game.playMode = "campaign"
+        Game.state = "select"
+        stopMusic()
+    elseif Game.playModeIndex == 2 then
+        Game.mode = "infinite"
+        Game.playMode = "infinite"
+        Game.state = "select"
+        stopMusic()
+    elseif Game.playModeIndex == 3 then
+        Game.mode = "coop"
+        Game.playMode = "coop"
+        Game.state = "select"
+        stopMusic()
+    else
+        Game.state = "menu"
+    end
+end
+
+local function goToMenu()
+    Game.state = "menu"
+    Game.paused = false
+    Game.menuIndex = 1
+    Game.statusMessage = nil
+    playMenuMusic()
+end
+
+local function activateMenuItem()
+    if Game.menuIndex == 1 then
+        Game.state = "playModes"
+        Game.playModeIndex = 1
+        playMenuMusic()
+    elseif Game.menuIndex == 2 then
+        Game.state = "settings"
+        Game.settingsIndex = 1
+        playMenuMusic()
+    elseif Game.menuIndex == 3 then
+        Game.state = "credits"
+        Game.creditsTime = 0
+        playMenuMusic()
+    elseif Game.menuIndex == 4 then
+        love.event.quit()
+    end
+end
+
+local function moveMenuSelection(direction)
+    Game.menuIndex = Game.menuIndex + direction
+    if Game.menuIndex < 1 then
+        Game.menuIndex = #MENU_ITEMS
+    elseif Game.menuIndex > #MENU_ITEMS then
+        Game.menuIndex = 1
+    end
+end
+
+local function settingsLabel(index)
+    if index == 1 then
+        return "MUSICA: " .. (Game.musicEnabled and "LIGADA" or "DESLIGADA")
+    elseif index == 2 then
+        return "TELA CHEIA: " .. (love.window.getFullscreen() and "LIGADA" or "DESLIGADA")
+    elseif index == 3 then
+        return "TECLAS"
+    elseif index == 4 then
+        return "CONTROLADOR"
+    end
+    return SETTINGS_ITEMS[index]
+end
+
+local function moveSettingsSelection(direction)
+    Game.settingsIndex = Game.settingsIndex + direction
+    if Game.settingsIndex < 1 then
+        Game.settingsIndex = #SETTINGS_ITEMS
+    elseif Game.settingsIndex > #SETTINGS_ITEMS then
+        Game.settingsIndex = 1
+    end
+end
+
+local function activateSettingsItem()
+    if Game.settingsIndex == 1 then
+        Game.musicEnabled = not Game.musicEnabled
+        if Game.musicEnabled then
+            playMenuMusic()
+        else
+            stopMusic()
+        end
+    elseif Game.settingsIndex == 2 then
+        love.window.setFullscreen(not love.window.getFullscreen())
+    elseif Game.settingsIndex == 5 then
+        goToMenu()
+    end
+end
+
 local function spawnCoin()
     local image = assets.coins[1]
+    local width = image:getWidth() * 1.65
+    local height = image:getHeight() * 1.65
+    local playerCenterX, playerCenterY = playerCenter()
+    for _ = 1, 80 do
+        local coin = {
+            x = love.math.random(60, Game.width - width - 60),
+            y = love.math.random(95, Game.height - height - 45),
+            width = width,
+            height = height,
+        }
+        local centerX = coin.x + width / 2
+        local centerY = coin.y + height / 2
+        if distance(centerX, centerY, playerCenterX, playerCenterY) >= 130 then
+            local overlapsCoin = false
+            for _, existingCoin in ipairs(coins) do
+                if overlaps(coin, existingCoin) then
+                    overlapsCoin = true
+                    break
+                end
+            end
+            if not overlapsCoin then
+                return coin
+            end
+        end
+    end
+    return {x = 80, y = 110, width = width, height = height}
+end
+
+local function coinHitbox(coin)
+    local image = currentFrame(assets.coins, 12)
+    local bounds = spriteBounds[image]
+    local scaleX = coin.width / image:getWidth()
+    local scaleY = coin.height / image:getHeight()
     return {
-        x = love.math.random(80, Game.width - 80),
-        y = love.math.random(120, Game.height - 80),
-        width = image:getWidth() * 0.9,
-        height = image:getHeight() * 0.9,
+        x = coin.x + bounds.x * scaleX,
+        y = coin.y + bounds.y * scaleY,
+        width = bounds.width * scaleX,
+        height = bounds.height * scaleY,
     }
 end
 
-local function spawnSaw(index)
+local function sawOverlapsAny(saw, list)
+    for _, item in ipairs(list) do
+        if overlaps(saw, item) then
+            return true
+        end
+    end
+    return false
+end
+
+local function safeSawPosition(width, height, minimumDistance)
+    local playerBox = playerHitbox()
+    for _ = 1, 80 do
+        local candidate = {
+            x = love.math.random(70, Game.width - width - 70),
+            y = love.math.random(90, Game.height - height - 45),
+            width = width,
+            height = height,
+        }
+        local candidateCenterX = candidate.x + width / 2
+        local candidateCenterY = candidate.y + height / 2
+        local playerCenterX, playerCenterY = playerCenter()
+        if distance(candidateCenterX, candidateCenterY, playerCenterX, playerCenterY) >= minimumDistance
+            and not sawOverlapsAny(candidate, coins)
+            and not sawOverlapsAny(candidate, saws) then
+            return candidate
+        end
+    end
+    return {
+        x = Game.width - width - 90,
+        y = 100,
+        width = width,
+        height = height,
+    }
+end
+
+local function spawnSaw(index, isStatic)
     local image = assets.saws[1]
-    local speed = 125 + Game.level * 30 + index * 12
+    local width = image:getWidth() * 0.55
+    local height = image:getHeight() * 0.55
+    local saw = safeSawPosition(width, height, isStatic and 170 or 230)
+    saw.static = isStatic
+    saw.vx = 0
+    saw.vy = 0
+    if not isStatic then
+        local playerCenterX, playerCenterY = playerCenter()
+        local sawCenterX = saw.x + width / 2
+        local sawCenterY = saw.y + height / 2
+        local dx = sawCenterX - playerCenterX
+        local dy = sawCenterY - playerCenterY
+        local length = math.max(1, math.sqrt(dx * dx + dy * dy))
+        local difficulty = Game.mode == "infinite" and Game.infiniteRound or Game.level
+        local speed = 125 + difficulty * 30 + index * 12
+        local direction = love.math.random() < 0.5 and -1 or 1
+        local awayX = dx / length
+        local awayY = dy / length
+        saw.vx = awayX * speed + (-awayY * speed * 0.35 * direction)
+        saw.vy = awayY * speed + (awayX * speed * 0.35 * direction)
+    end
+    return saw
+end
+
+local function spawnCornerSaw(index)
+    local image = assets.saws[1]
+    local width = image:getWidth() * 0.55
+    local height = image:getHeight() * 0.55
+    local margin = 30
+    local route = {
+        left = margin,
+        top = 78,
+        right = Game.width - margin - width,
+        bottom = Game.height - margin - height,
+    }
+    local perimeter = (route.right - route.left) * 2 + (route.bottom - route.top) * 2
     return {
-        x = love.math.random(100, Game.width - 150),
-        y = love.math.random(100, Game.height - 150),
-        width = image:getWidth() * 0.55,
-        height = image:getHeight() * 0.55,
-        vx = love.math.random() < 0.5 and speed or -speed,
-        vy = love.math.random() < 0.5 and speed or -speed,
+        x = route.left,
+        y = route.top,
+        width = width,
+        height = height,
+        corner = true,
+        route = route,
+        routeDistance = (index - 1) * perimeter / 2,
+        routePerimeter = perimeter,
+        routeSpeed = 90 + (Game.mode == "infinite" and Game.infiniteRound or Game.level) * 8,
+        routeDirection = index % 2 == 0 and -1 or 1,
+        vx = 0,
+        vy = 0,
     }
 end
 
-local function startLevel(level)
-    Game.state = "playing"
-    Game.level = level
-    Game.coins = 0
-    Game.timeLeft = level == 1 and 35 or 30
-    Game.paused = false
-    local characterAssets = assets.characters[Game.selectedCharacter]
+local function updateCornerSaw(saw, dt)
+    local route = saw.route
+    saw.routeDistance = (saw.routeDistance + saw.routeSpeed * saw.routeDirection * dt) % saw.routePerimeter
+    local distance = saw.routeDistance
+    local topLength = route.right - route.left
+    local rightLength = route.bottom - route.top
+
+    if distance <= topLength then
+        saw.x = route.left + distance
+        saw.y = route.top
+    elseif distance <= topLength + rightLength then
+        saw.x = route.right
+        saw.y = route.top + distance - topLength
+    elseif distance <= topLength * 2 + rightLength then
+        saw.x = route.right - (distance - topLength - rightLength)
+        saw.y = route.bottom
+    else
+        saw.x = route.left
+        saw.y = route.bottom - (distance - topLength * 2 - rightLength)
+    end
+end
+
+local function updateSaw(saw, dt)
+    if saw.corner then
+        updateCornerSaw(saw, dt)
+        return
+    end
+    saw.x = saw.x + saw.vx * dt
+    saw.y = saw.y + saw.vy * dt
+    if saw.x <= 0 or saw.x >= Game.width - saw.width then
+        saw.vx = -saw.vx
+        saw.x = clamp(saw.x, 0, Game.width - saw.width)
+    end
+    if saw.y <= 60 or saw.y >= Game.height - saw.height then
+        saw.vy = -saw.vy
+        saw.y = clamp(saw.y, 60, Game.height - saw.height)
+    end
+end
+
+local function createPlayer(character, x, y)
+    local characterAssets = assets.characters[character]
     local spriteScale = 0.35
     local renderWidth = characterAssets.idle:getWidth()
     local renderHeight = characterAssets.idle:getHeight()
@@ -199,11 +619,15 @@ local function startLevel(level)
         renderWidth = math.max(renderWidth, image:getWidth())
         renderHeight = math.max(renderHeight, image:getHeight())
     end
+    for _, image in ipairs(characterAssets.punch) do
+        renderWidth = math.max(renderWidth, image:getWidth())
+        renderHeight = math.max(renderHeight, image:getHeight())
+    end
     renderWidth = renderWidth * spriteScale
     renderHeight = renderHeight * spriteScale
-    player = {
-        x = (Game.width - renderWidth) / 2,
-        y = (Game.height - renderHeight) / 2,
+    return {
+        x = x,
+        y = y,
         width = renderWidth,
         height = renderHeight,
         renderWidth = renderWidth,
@@ -211,30 +635,80 @@ local function startLevel(level)
         scale = spriteScale,
         facing = 1,
         moving = false,
+        character = character,
+        abilityTimer = 0,
+        abilityCooldown = 0,
+        abilityActive = false,
+        alive = true,
     }
+end
+
+local function startLevel(level)
+    Game.state = "countdown"
+    Game.level = level
+    Game.coins = 0
+    Game.timeLeft = Game.mode == "infinite" and math.max(16, 34 - Game.infiniteRound * 0.45)
+        or (level == 1 and 35 or 30)
+    Game.paused = false
+    Game.countdown = 3
+    Game.countdownMode = "level"
+    local firstX = Game.mode == "coop" and Game.width * 0.3 or Game.width / 2
+    local secondX = Game.width * 0.7
+    player = createPlayer(Game.selectedCharacter, firstX, Game.height / 2)
+    player2 = Game.mode == "coop" and createPlayer(Game.selectedCharacter == 1 and 2 or 1, secondX, Game.height / 2) or nil
     coins = {}
     saws = {}
 
-    for _ = 1, 12 do
+    local coinGoal = Game.mode == "infinite" and math.min(12, 3 + Game.infiniteRound) or 12
+    Game.infiniteGoal = coinGoal
+    for _ = 1, coinGoal do
         table.insert(coins, spawnCoin())
     end
-    for index = 1, level do
-        table.insert(saws, spawnSaw(index))
+    local movingSawCount = Game.mode == "infinite" and math.min(12, Game.infiniteRound) or level
+    for index = 1, movingSawCount do
+        table.insert(saws, spawnSaw(index, false))
+    end
+    local staticSawCount = Game.mode == "infinite" and math.min(6, math.floor(Game.infiniteRound / 2))
+        or math.min(5, 1 + math.floor(level / 2))
+    for index = 1, staticSawCount do
+        table.insert(saws, spawnSaw(index, true))
+    end
+    local cornerSawCount = 0
+    if Game.mode == "infinite" then
+        cornerSawCount = Game.infiniteRound >= 3 and math.min(2, math.floor(Game.infiniteRound / 3)) or 0
+    elseif level == 2 or level == 4 or level == 6 then
+        cornerSawCount = level == 6 and 2 or 1
+    end
+    for index = 1, cornerSawCount do
+        table.insert(saws, spawnCornerSaw(index))
     end
 
-    if assets.music then
-        assets.music:setLooping(true)
-        assets.music:play()
-    end
+    playMusic(assets.musicTracks[((level - 1) % #assets.musicTracks) + 1])
+end
+
+local function startInfiniteMode()
+    Game.mode = "infinite"
+    Game.infiniteRound = 1
+    startLevel(1)
+end
+
+local function startBoss()
+    Game.state = "bossCountdown"
+    Game.level = 6
+    Game.countdown = 3
+    Game.countdownMode = "boss"
+    Game.bossTime = 30
+    bossSpawnTimer = 0.8
+    bossSaws = {}
+    boss = {x = Game.width / 2, y = 325, radius = 72}
+    playMusic(assets.musicTracks[2])
 end
 
 local function returnToSelection(message)
     Game.state = "select"
     Game.statusMessage = message
     Game.paused = false
-    if assets.music then
-        assets.music:stop()
-    end
+    stopMusic()
 end
 
 local function drawCentered(text, y, font)
@@ -242,21 +716,148 @@ local function drawCentered(text, y, font)
     love.graphics.printf(text, 0, y, Game.width, "center")
 end
 
+local function drawDiscoBackground(level)
+    local palettes = {
+        { base = {0.025, 0.01, 0.09}, primary = {0.95, 0.08, 0.55}, secondary = {0.18, 0.35, 1.0} },
+        { base = {0.01, 0.06, 0.08}, primary = {0.05, 0.95, 0.85}, secondary = {0.15, 0.35, 1.0} },
+        { base = {0.08, 0.015, 0.025}, primary = {1.0, 0.25, 0.04}, secondary = {1.0, 0.8, 0.08} },
+        { base = {0.04, 0.01, 0.09}, primary = {0.65, 0.15, 1.0}, secondary = {0.05, 0.95, 0.95} },
+    }
+    local palette = palettes[((level - 1) % #palettes) + 1]
+    local time = Game.animationTime
+
+    love.graphics.setColor(palette.base[1], palette.base[2], palette.base[3], 1)
+    love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
+
+    local tileSize = 72
+    local firstRow = 1
+    local lastRow = math.ceil(Game.height / tileSize)
+    local lastColumn = math.ceil(Game.width / tileSize)
+    for row = firstRow, lastRow do
+        for column = 0, lastColumn do
+            local pulse = math.sin(time * 4.5 + row * 0.8 + column * 1.35 + level)
+            local colorPhase = (row * 3 + column * 5 + level) % 4
+            local colors = {
+                palette.primary,
+                palette.secondary,
+                {0.96, 0.25, 0.6},
+                {1.0, 0.72, 0.12},
+            }
+            local color = colors[colorPhase + 1]
+            local brightness = 0.18 + math.max(0, pulse) * 0.42
+            local x = column * tileSize
+            local y = row * tileSize
+            love.graphics.setColor(0.035, 0.025, 0.09, 1)
+            love.graphics.rectangle("fill", x + 1, y + 1, tileSize - 1, tileSize - 1)
+            love.graphics.setColor(color[1] * 0.35, color[2] * 0.35, color[3] * 0.35, 0.95)
+            love.graphics.rectangle("fill", x + 4, y + 4, tileSize - 7, tileSize - 7)
+            love.graphics.setColor(color[1], color[2], color[3], brightness)
+            love.graphics.rectangle("fill", x + 7, y + 7, tileSize - 13, tileSize - 13)
+            love.graphics.setColor(1, 1, 1, 0.18 + math.max(0, pulse) * 0.22)
+            love.graphics.rectangle("fill", x + 10, y + 10, tileSize - 20, 4)
+            love.graphics.rectangle("fill", x + 10, y + 10, 4, tileSize - 20)
+            love.graphics.setColor(color[1] * 0.55, color[2] * 0.55, color[3] * 0.55, 0.8)
+            love.graphics.rectangle("line", x + 4, y + 4, tileSize - 7, tileSize - 7)
+        end
+    end
+
+    love.graphics.setColor(1, 1, 1, 0.16)
+    love.graphics.rectangle("line", 8, 63, Game.width - 16, Game.height - 71)
+end
+
+local function drawMenuBackground()
+    local time = Game.animationTime
+    love.graphics.setColor(0.015, 0.005, 0.04, 1)
+    love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
+
+    for index = 0, 7 do
+        local x = (index + 0.5) * Game.width / 8
+        local y = 110 + math.sin(time * 0.8 + index) * 65
+        local radius = 80 + math.sin(time * 1.7 + index * 1.3) * 22
+        local progress = (math.sin(time * 0.45 + index * 0.55) + 1) / 2
+        local red = 0.25 + progress * 0.7
+        local green = 0.04 + (1 - progress) * 0.18
+        local blue = 0.35 + (1 - progress) * 0.6
+        love.graphics.setColor(red, green, blue, 0.14)
+        love.graphics.circle("fill", x, y, radius)
+    end
+
+    for row = 0, 8 do
+        for column = 0, 15 do
+            local progress = (math.sin(time * 0.35) + 1) / 2
+            local pulse = math.max(0, math.sin(time * 3.5 + row + column * 0.8))
+            local color = {0.15 + progress * 0.75, 0.06 + (1 - progress) * 0.58, 0.4 + (1 - progress) * 0.55}
+            love.graphics.setColor(color[1], color[2], color[3], 0.08 + pulse * 0.18)
+            love.graphics.rectangle("fill", column * 80 + 2, 360 + row * 45 + 2, 76, 41)
+        end
+    end
+
+    for index = 1, 30 do
+        local x = index * 44 + math.sin(time * 2 + index) * 10
+        local height = 15 + (math.sin(time * 5 + index * 0.7) + 1) * 18
+        love.graphics.setColor(0.95, 0.2 + (index % 3) * 0.2, 0.75, 0.25)
+        love.graphics.rectangle("fill", x, 345 - height, 18, height)
+    end
+
+    love.graphics.setColor(1, 1, 1, 0.4)
+    love.graphics.rectangle("line", 30, 30, Game.width - 60, Game.height - 60)
+end
+
+local function drawBoss()
+    if not boss then
+        return
+    end
+    local pulse = 1 + math.sin(Game.animationTime * 5) * 0.08
+    love.graphics.setColor(0.9, 0.08, 0.12, 0.25)
+    love.graphics.circle("fill", boss.x, boss.y, boss.radius * 1.5 * pulse)
+    love.graphics.setColor(0.12, 0.02, 0.03, 1)
+    love.graphics.circle("fill", boss.x, boss.y, boss.radius)
+    love.graphics.setColor(1, 0.15, 0.05, 1)
+    love.graphics.setLineWidth(8)
+    love.graphics.circle("line", boss.x, boss.y, boss.radius)
+    love.graphics.setLineWidth(3)
+    for index = 0, 7 do
+        local angle = Game.animationTime * 1.5 + index * math.pi / 4
+        local inner = boss.radius * 0.75
+        local outer = boss.radius * 1.22
+        love.graphics.polygon(
+            "fill",
+            boss.x + math.cos(angle - 0.12) * inner,
+            boss.y + math.sin(angle - 0.12) * inner,
+            boss.x + math.cos(angle) * outer,
+            boss.y + math.sin(angle) * outer,
+            boss.x + math.cos(angle + 0.12) * inner,
+            boss.y + math.sin(angle + 0.12) * inner
+        )
+    end
+    love.graphics.setColor(1, 0.8, 0.1, 1)
+    love.graphics.circle("fill", boss.x, boss.y, 18 + math.sin(Game.animationTime * 6) * 3)
+end
+
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
     love.math.setRandomSeed(os.time())
-    assets.background = loadImage("sprites/Sprite6/b4fb1ee4-44a0-4392-95d2-1636c1094d13.png")
     assets.characters = {}
     for index, character in ipairs(characters) do
-        assets.characters[index] = { idle = loadImage(character.idle), walk = loadImages(character.walk) }
+        assets.characters[index] = {
+            idle = loadImage(character.idle),
+            walk = loadImages(character.walk),
+            punch = loadImages(character.punch),
+        }
     end
     assets.coins = loadImages(coinFrames)
     assets.saws = loadImages(sawFrames)
-    assets.font = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 28)
+    assets.font = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 24)
+    assets.smallFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 16)
     assets.titleFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 52)
-    assets.music = love.audio.newSource("sounds/musicaJogo/musicaJogo.mp3", "stream")
+    assets.musicTracks = {
+        love.audio.newSource("sounds/Final_Quarter_Dash.mp3", "stream"),
+        love.audio.newSource("sounds/Frame_Perfect.mp3", "stream"),
+    }
+    assets.menuMusic = love.audio.newSource("sounds/High_Score_Serenade.mp3", "stream")
     assets.coinSound = love.audio.newSource("sounds/somMoeda/somMoeda.mp3", "static")
     refreshGamepad()
+    playMenuMusic()
 end
 
 function love.keypressed(key)
@@ -270,8 +871,42 @@ function love.keypressed(key)
         return
     end
 
-    if Game.state == "menu" and (key == "return" or key == "space") then
-        Game.state = "select"
+    if Game.state == "menu" then
+        if key == "up" or key == "w" then
+            moveMenuSelection(-1)
+        elseif key == "down" or key == "s" then
+            moveMenuSelection(1)
+        elseif key == "return" or key == "space" then
+            activateMenuItem()
+        elseif key == "escape" then
+            love.event.quit()
+        end
+        return
+    end
+
+    if Game.state == "playModes" then
+        if key == "up" or key == "w" then
+            movePlayModeSelection(-1)
+        elseif key == "down" or key == "s" then
+            movePlayModeSelection(1)
+        elseif key == "return" or key == "space" then
+            activatePlayMode()
+        elseif key == "escape" then
+            Game.state = "menu"
+        end
+        return
+    end
+
+    if Game.state == "settings" then
+        if key == "up" or key == "w" then
+            moveSettingsSelection(-1)
+        elseif key == "down" or key == "s" then
+            moveSettingsSelection(1)
+        elseif key == "return" or key == "space" then
+            activateSettingsItem()
+        elseif key == "escape" then
+            goToMenu()
+        end
         return
     end
 
@@ -281,27 +916,44 @@ function love.keypressed(key)
         elseif key == "right" or key == "d" then
             Game.selectedCharacter = 2
         elseif key == "return" or key == "space" then
-            startLevel(1)
+            if Game.mode == "infinite" then
+                startInfiniteMode()
+            else
+                startLevel(1)
+            end
         elseif key == "escape" then
-            Game.state = "menu"
+            goToMenu()
         end
         return
     end
 
-    if Game.state == "playing" and key == "escape" then
+    if (Game.state == "playing" or Game.state == "boss") and key == "escape" then
         Game.paused = not Game.paused
         if Game.paused then
-            assets.music:pause()
-        else
+            if assets.music then assets.music:pause() end
+        elseif assets.music then
             assets.music:play()
         end
         return
     end
 
-    if (Game.state == "gameover" or Game.state == "victory") and (key == "return" or key == "space") then
+    if (Game.state == "playing" or Game.state == "boss") and key == "space" then
+        activateAbility(player)
+        return
+    end
+    if Game.mode == "coop" and (Game.state == "playing" or Game.state == "boss") and key == "v" then
+        activateAbility(player2)
+        return
+    end
+
+    if Game.state == "credits" and (key == "return" or key == "space" or key == "escape") then
+        goToMenu()
+    elseif Game.state == "ending" and (key == "return" or key == "space" or key == "escape") then
+        goToMenu()
+    elseif (Game.state == "gameover" or Game.state == "victory") and (key == "return" or key == "space") then
         returnToSelection()
     elseif key == "escape" then
-        love.event.quit()
+        goToMenu()
     end
 end
 
@@ -323,27 +975,65 @@ function love.gamepadpressed(joystick, button)
         return
     end
 
-    if Game.state == "menu" and gamepadConfirm(button) then
-        Game.state = "select"
+    if Game.state == "menu" then
+        if button == "dpup" or button == "leftshoulder" then
+            moveMenuSelection(-1)
+        elseif button == "dpdown" or button == "rightshoulder" then
+            moveMenuSelection(1)
+        elseif gamepadConfirm(button) then
+            activateMenuItem()
+        elseif button == "b" or button == "back" then
+            love.event.quit()
+        end
+    elseif Game.state == "playModes" then
+        if button == "dpup" or button == "leftshoulder" then
+            movePlayModeSelection(-1)
+        elseif button == "dpdown" or button == "rightshoulder" then
+            movePlayModeSelection(1)
+        elseif gamepadConfirm(button) then
+            activatePlayMode()
+        elseif button == "b" or button == "back" then
+            Game.state = "menu"
+        end
+    elseif Game.state == "settings" then
+        if button == "dpup" or button == "leftshoulder" then
+            moveSettingsSelection(-1)
+        elseif button == "dpdown" or button == "rightshoulder" then
+            moveSettingsSelection(1)
+        elseif gamepadConfirm(button) then
+            activateSettingsItem()
+        elseif button == "b" or button == "back" then
+            goToMenu()
+        end
     elseif Game.state == "select" then
         if button == "dpleft" or button == "leftshoulder" then
             goToPreviousCharacter()
         elseif button == "dpright" or button == "rightshoulder" then
             goToNextCharacter()
         elseif gamepadConfirm(button) then
-            startLevel(1)
+            if Game.mode == "infinite" then
+                startInfiniteMode()
+            else
+                startLevel(1)
+            end
         elseif button == "b" or button == "back" then
-            Game.state = "menu"
+            goToMenu()
         end
-    elseif Game.state == "playing" then
-        if button == "start" or button == "back" then
+    elseif Game.state == "playing" or Game.state == "boss" then
+        if button == "x" or button == "y" then
+            activateAbility()
+        elseif button == "start" or button == "back" then
             Game.paused = not Game.paused
             if Game.paused then
-                assets.music:pause()
-            else
+                if assets.music then assets.music:pause() end
+            elseif assets.music then
                 assets.music:play()
             end
         end
+    elseif Game.state == "credits" and (gamepadConfirm(button) or button == "b" or button == "back") then
+        goToMenu()
+    elseif Game.state == "ending" and (gamepadConfirm(button) or button == "b" or button == "back") then
+        goToMenu()
     elseif (Game.state == "gameover" or Game.state == "victory") and gamepadConfirm(button) then
         returnToSelection()
     end
@@ -358,6 +1048,10 @@ function love.joystickpressed(joystick, button)
         love.gamepadpressed(joystick, "a")
     elseif button == 2 then
         love.gamepadpressed(joystick, "b")
+    elseif button == 3 then
+        love.gamepadpressed(joystick, "x")
+    elseif button == 4 then
+        love.gamepadpressed(joystick, "y")
     elseif button == 7 then
         love.gamepadpressed(joystick, "back")
     elseif button == 8 then
@@ -373,36 +1067,19 @@ function love.joystickpressed(joystick, button)
     end
 end
 
-function love.update(dt)
-    if Game.state == "select" and gamepad then
-        local horizontal = gamepadAxis("leftx")
-        local hatHorizontal = rawDpad()
-        if math.abs(horizontal) < 0.6 then
-            horizontal = hatHorizontal
-        end
-        gamepadSelectionRepeat = math.max(0, gamepadSelectionRepeat - dt)
-        if gamepadSelectionRepeat == 0 and horizontal <= -0.6 then
-            goToPreviousCharacter()
-            gamepadSelectionRepeat = 0.25
-        elseif gamepadSelectionRepeat == 0 and horizontal >= 0.6 then
-            goToNextCharacter()
-            gamepadSelectionRepeat = 0.25
-        end
+local function readMovement(scheme)
+    if scheme == "arrows" then
+        return (love.keyboard.isDown("right") and 1 or 0) - (love.keyboard.isDown("left") and 1 or 0),
+            (love.keyboard.isDown("down") and 1 or 0) - (love.keyboard.isDown("up") and 1 or 0)
     end
-
-    if Game.state ~= "playing" or Game.paused then
-        return
+    if scheme == "wasd" then
+        return (love.keyboard.isDown("d") and 1 or 0) - (love.keyboard.isDown("a") and 1 or 0),
+            (love.keyboard.isDown("s") and 1 or 0) - (love.keyboard.isDown("w") and 1 or 0)
     end
-
-    Game.animationTime = Game.animationTime + dt
-    Game.timeLeft = Game.timeLeft - dt
-    if Game.timeLeft <= 0 then
-        returnToSelection("O tempo acabou. Tente novamente!")
-        return
-    end
-
-    local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0) - (love.keyboard.isDown("left", "a") and 1 or 0)
-    local vertical = (love.keyboard.isDown("down", "s") and 1 or 0) - (love.keyboard.isDown("up", "w") and 1 or 0)
+    local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0)
+        - (love.keyboard.isDown("left", "a") and 1 or 0)
+    local vertical = (love.keyboard.isDown("down", "s") and 1 or 0)
+        - (love.keyboard.isDown("up", "w") and 1 or 0)
     local gamepadHorizontal = gamepadAxis("leftx")
     local gamepadVertical = gamepadAxis("lefty")
     if gamepad then
@@ -430,48 +1107,237 @@ function love.update(dt)
         horizontal = gamepadHorizontal
         vertical = gamepadVertical
     end
-    player.moving = horizontal ~= 0 or vertical ~= 0
-    if horizontal ~= 0 and vertical ~= 0 then
-        horizontal = horizontal * 0.707
-        vertical = vertical * 0.707
+    local length = math.sqrt(horizontal * horizontal + vertical * vertical)
+    if length > 1 then
+        horizontal = horizontal / length
+        vertical = vertical / length
     end
-    if horizontal ~= 0 then
-        player.facing = horizontal
-    end
+    return horizontal, vertical
+end
 
+local function movePlayer(dt, target, scheme)
+    if not target or not target.alive then
+        return
+    end
+    local horizontal, vertical = readMovement(scheme)
+    local length = math.sqrt(horizontal * horizontal + vertical * vertical)
+    target.moving = length > 0
+    if math.abs(horizontal) > 0.01 then
+        target.facing = horizontal
+    end
     local speed = 235
-    player.x = clamp(player.x + horizontal * speed * dt, 0, Game.width - player.renderWidth)
-    player.y = clamp(player.y + vertical * speed * dt, 60, Game.height - player.renderHeight)
+    target.x = clamp(target.x + horizontal * speed * dt, 0, Game.width - target.renderWidth)
+    target.y = clamp(target.y + vertical * speed * dt, 60, Game.height - target.renderHeight)
+end
 
-    for _, saw in ipairs(saws) do
+local function updateAbility(dt, target)
+    if not target then
+        return
+    end
+    target.abilityCooldown = math.max(0, target.abilityCooldown - dt)
+    if target.abilityTimer > 0 then
+        target.abilityTimer = math.max(0, target.abilityTimer - dt)
+        if target.abilityTimer == 0 then
+            target.abilityActive = false
+        end
+    end
+end
+
+local function repelSawFromPlayer(saw, target)
+    local playerCenterX, playerCenterY = playerCenter(target)
+    local sawCenterX = saw.x + saw.width / 2
+    local sawCenterY = saw.y + saw.height / 2
+    local dx = sawCenterX - playerCenterX
+    local dy = sawCenterY - playerCenterY
+    local length = math.max(1, math.sqrt(dx * dx + dy * dy))
+    local force = 560
+    saw.vx = (dx / length) * force
+    saw.vy = (dy / length) * force
+    saw.corner = false
+    saw.x = saw.x + (dx / length) * 18
+    saw.y = saw.y + (dy / length) * 18
+    target.abilityActive = false
+    target.abilityTimer = 0
+end
+
+local function eliminatePlayer(target, message)
+    if not target or not target.alive then
+        return
+    end
+    target.alive = false
+    target.moving = false
+    target.abilityActive = false
+    if Game.mode ~= "coop" then
+        Game.state = "gameover"
+        Game.statusMessage = message
+        stopMusic()
+    elseif not (player and player.alive) and not (player2 and player2.alive) then
+        Game.state = "gameover"
+        Game.statusMessage = "Os dois jogadores foram derrotados."
+        stopMusic()
+    end
+end
+
+local function spawnBossWave()
+    local baseAngle = Game.animationTime * 0.7
+    for index = 0, 3 do
+        local angle = baseAngle + index * math.pi / 2
+        local speed = 145 + index * 18
+        table.insert(bossSaws, {
+            x = boss.x - 18,
+            y = boss.y - 18,
+            width = 52,
+            height = 52,
+            vx = math.cos(angle) * speed,
+            vy = math.sin(angle) * speed,
+            angle = angle,
+            life = 0,
+        })
+    end
+end
+
+local function updateBoss(dt)
+    Game.bossTime = Game.bossTime - dt
+    bossSpawnTimer = bossSpawnTimer - dt
+    movePlayer(dt, player, "coop" == Game.mode and "wasd" or nil)
+    if player2 then
+        movePlayer(dt, player2, "arrows")
+    end
+    if bossSpawnTimer <= 0 then
+        spawnBossWave()
+        bossSpawnTimer = 1.25
+    end
+
+    for index = #bossSaws, 1, -1 do
+        local saw = bossSaws[index]
         saw.x = saw.x + saw.vx * dt
         saw.y = saw.y + saw.vy * dt
-        if saw.x <= 0 or saw.x >= Game.width - saw.width then
-            saw.vx = -saw.vx
-            saw.x = clamp(saw.x, 0, Game.width - saw.width)
+        saw.angle = saw.angle + dt * 7
+        saw.life = saw.life + dt
+        if saw.life > 7 or saw.x < -80 or saw.x > Game.width + 80 or saw.y < -80 or saw.y > Game.height + 80 then
+            table.remove(bossSaws, index)
+        elseif player.alive and circleOverlapsRectangle(
+            saw.x + saw.width / 2,
+            saw.y + saw.height / 2,
+            bossSawRadius(saw),
+            playerHitbox()
+        ) then
+            if player.alive and player.character == 1 and player.abilityActive then
+                repelSawFromPlayer(saw, player)
+            elseif player.alive and not (player.character == 2 and player.abilityActive) then
+                eliminatePlayer(player, "O jogador foi derrotado.")
+            end
+        elseif player2 and player2.alive and circleOverlapsRectangle(
+            saw.x + saw.width / 2, saw.y + saw.height / 2, bossSawRadius(saw), playerHitbox(player2)
+        ) then
+            if player2.alive and player2.character == 1 and player2.abilityActive then
+                repelSawFromPlayer(saw, player2)
+            elseif player2.alive and not (player2.character == 2 and player2.abilityActive) then
+                eliminatePlayer(player2, "O jogador foi derrotado.")
+            end
         end
-        if saw.y <= 60 or saw.y >= Game.height - saw.height then
-            saw.vy = -saw.vy
-            saw.y = clamp(saw.y, 60, Game.height - saw.height)
+    end
+
+    if Game.bossTime <= 0 then
+        Game.state = "ending"
+        Game.endingTime = 0
+        stopMusic()
+    end
+end
+
+function love.update(dt)
+    Game.animationTime = Game.animationTime + dt
+    Game.uiTime = Game.uiTime + dt
+
+    if Game.state == "select" and gamepad then
+        local horizontal = gamepadAxis("leftx")
+        local hatHorizontal = rawDpad()
+        if math.abs(horizontal) < 0.6 then
+            horizontal = hatHorizontal
         end
-        if overlaps(playerHitbox(), saw) then
-            Game.state = "gameover"
-            Game.statusMessage = "Game Over!"
-            assets.music:stop()
-            return
+        gamepadSelectionRepeat = math.max(0, gamepadSelectionRepeat - dt)
+        if gamepadSelectionRepeat == 0 and horizontal <= -0.6 then
+            goToPreviousCharacter()
+            gamepadSelectionRepeat = 0.25
+        elseif gamepadSelectionRepeat == 0 and horizontal >= 0.6 then
+            goToNextCharacter()
+            gamepadSelectionRepeat = 0.25
+        end
+    end
+
+    if Game.state == "credits" then
+        Game.creditsTime = Game.creditsTime + dt
+        return
+    end
+
+    if Game.state == "ending" then
+        Game.endingTime = Game.endingTime + dt
+        if Game.endingTime >= 12 then
+            goToMenu()
+        end
+        return
+    end
+
+    if Game.state == "countdown" or Game.state == "bossCountdown" then
+        Game.countdown = Game.countdown - dt
+        if Game.countdown <= 0 then
+            Game.countdown = 0
+            Game.state = Game.countdownMode == "boss" and "boss" or "playing"
+        end
+        return
+    end
+
+    if Game.state == "boss" and not Game.paused then
+        updateAbility(dt, player)
+        updateAbility(dt, player2)
+        updateBoss(dt)
+        return
+    end
+
+    if Game.state ~= "playing" or Game.paused then
+        return
+    end
+
+    updateAbility(dt, player)
+    updateAbility(dt, player2)
+    Game.timeLeft = Game.timeLeft - dt
+    if Game.timeLeft <= 0 then
+        returnToSelection("O tempo acabou. Tente novamente!")
+        return
+    end
+
+    movePlayer(dt, player, Game.mode == "coop" and "wasd" or nil)
+    if player2 then
+        movePlayer(dt, player2, "arrows")
+    end
+
+    for _, saw in ipairs(saws) do
+        updateSaw(saw, dt)
+        local hitTarget = player.alive and overlaps(playerHitbox(), sawHitbox(saw)) and player
+        if not hitTarget and player2 and player2.alive and overlaps(playerHitbox(player2), sawHitbox(saw)) then
+            hitTarget = player2
+        end
+        if hitTarget then
+            if hitTarget.character == 1 and hitTarget.abilityActive then
+                repelSawFromPlayer(saw, hitTarget)
+            elseif not (hitTarget.character == 2 and hitTarget.abilityActive) then
+                eliminatePlayer(hitTarget, "O jogador foi derrotado.")
+            end
         end
     end
 
     for index = #coins, 1, -1 do
-        if overlaps(playerHitbox(), coins[index]) then
+        if (player.alive and overlaps(playerHitbox(), coinHitbox(coins[index])))
+            or (player2 and player2.alive and overlaps(playerHitbox(player2), coinHitbox(coins[index]))) then
             table.remove(coins, index)
             Game.coins = Game.coins + 1
             play(assets.coinSound)
-            if Game.coins == 12 then
-                if Game.level == 4 then
-                    Game.state = "victory"
-                    Game.statusMessage = "Vitória conquistada!"
-                    assets.music:stop()
+            if Game.coins == Game.infiniteGoal then
+                if Game.mode == "infinite" then
+                    Game.infiniteRound = Game.infiniteRound + 1
+                    startLevel(1)
+                elseif Game.level == 6 then
+                    startBoss()
                 else
                     startLevel(Game.level + 1)
                 end
@@ -481,24 +1347,78 @@ function love.update(dt)
 end
 
 function love.draw()
-    local scaleX = love.graphics.getWidth() / Game.width
-    local scaleY = love.graphics.getHeight() / Game.height
+    local windowWidth = love.graphics.getWidth()
+    local windowHeight = love.graphics.getHeight()
+    local viewScale = math.min(windowWidth / Game.width, windowHeight / Game.height)
+    local viewOffsetX = (windowWidth - Game.width * viewScale) / 2
+    local viewOffsetY = (windowHeight - Game.height * viewScale) / 2
     love.graphics.push()
-    love.graphics.scale(scaleX, scaleY)
+    love.graphics.translate(viewOffsetX, viewOffsetY)
+    love.graphics.scale(viewScale, viewScale)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(assets.background, 0, 0, 0, Game.width / assets.background:getWidth(), Game.height / assets.background:getHeight())
+    if Game.state == "playing" or Game.state == "countdown"
+        or Game.state == "boss" or Game.state == "bossCountdown" then
+        drawDiscoBackground(Game.level)
+    else
+        drawMenuBackground()
+    end
 
     if Game.state == "menu" then
-        love.graphics.setColor(0, 0, 0, 0.65)
-        love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
         love.graphics.setColor(1, 1, 1)
-        drawCentered("SAWS AND PARTIES", 200, assets.titleFont)
-        drawCentered("Colete moedas e fuja das serras!", 300, assets.font)
-        drawCentered("ENTER  Jogar", 390, assets.font)
-        drawCentered("F11  Tela cheia     ESC  Sair", 440, assets.font)
+        drawCentered("SAWS AND PARTIES", 68, assets.titleFont)
+        drawCentered("DISCOTECA DE SOBREVIVENCIA", 135, assets.font)
+        for index = 1, #MENU_ITEMS do
+            local selected = index == Game.menuIndex
+            local y = 245 + index * 48
+            local entryOffset = math.max(0, 0.55 - Game.uiTime) * (6 - index) * 24
+            local pulse = selected and math.sin(Game.uiTime * 5) * 3 or 0
+            if selected then
+                love.graphics.setColor(0.1, 0.8, 1, 0.18)
+                love.graphics.rectangle("fill", 380 - pulse, y - 10 - entryOffset, 520 + pulse * 2, 44, 8, 8)
+            end
+            love.graphics.setColor(selected and 1 or 0.65, selected and 0.85 or 0.65, selected and 0.2 or 0.9, 1)
+            love.graphics.printf(menuLabel(index), 420, y - entryOffset, 440, "center")
+        end
+        love.graphics.setColor(1, 1, 1, 0.8)
+        drawCentered("Setas/WASD ou D-pad para navegar | ENTER/A confirmar", 610, assets.font)
+        drawCentered(Game.controllerName and ("Controle detectado: " .. Game.controllerName) or "Nenhum controle detectado", 655, assets.font)
+    elseif Game.state == "playModes" then
+        love.graphics.setColor(1, 1, 1)
+        drawCentered("ESCOLHA O MODO", 90, assets.titleFont)
+        drawCentered("Selecione como deseja jogar", 150, assets.font)
+        for index, label in ipairs(PLAY_MODE_ITEMS) do
+            local selected = index == Game.playModeIndex
+            if selected then
+                love.graphics.setColor(0.1, 0.8, 1, 0.2)
+                love.graphics.rectangle("fill", 370, 220 + index * 58, 540, 50)
+            end
+            love.graphics.setColor(selected and 1 or 0.65, selected and 0.85 or 0.65, selected and 0.2 or 0.9, 1)
+            love.graphics.printf(label, 390, 232 + index * 58, 500, "center")
+        end
+        love.graphics.setColor(1, 1, 1, 0.8)
+        drawCentered("↑↓ navegar | ENTER/A confirmar | ESC/B voltar", 650, assets.font)
+    elseif Game.state == "settings" then
+        love.graphics.setColor(1, 1, 1)
+        drawCentered("CONFIGURACOES", 75, assets.titleFont)
+        drawCentered("Ajuste a experiencia da pista", 140, assets.font)
+        for index = 1, #SETTINGS_ITEMS do
+            local selected = index == Game.settingsIndex
+            if selected then
+                love.graphics.setColor(0.95, 0.2, 0.65, 0.2)
+                love.graphics.rectangle("fill", 360, 205 + index * 58, 560, 48, 8, 8)
+            end
+            love.graphics.setColor(selected and 1 or 0.7, selected and 0.85 or 0.7, selected and 0.25 or 0.95, 1)
+            love.graphics.printf(settingsLabel(index), 380, 216 + index * 58, 520, "center")
+        end
+        love.graphics.setColor(1, 1, 1, 0.8)
+        if Game.settingsIndex == 3 then
+            drawCentered("Mover: Setas ou WASD | Pausar: ESC | Tela cheia: F11", 585, assets.font)
+        elseif Game.settingsIndex == 4 then
+            drawCentered(Game.controllerName and ("Detectado: " .. Game.controllerName .. " | Analógico esquerdo/D-pad")
+                or "Nenhum controlador detectado", 585, assets.font)
+        end
+        drawCentered("ENTER/A selecionar | ESC/B voltar", 650, assets.font)
     elseif Game.state == "select" then
-        love.graphics.setColor(0, 0, 0, 0.65)
-        love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
         love.graphics.setColor(1, 1, 1)
         drawCentered("ESCOLHA SEU PERSONAGEM", 65, assets.titleFont)
         if Game.statusMessage then
@@ -510,50 +1430,128 @@ function love.draw()
         for index, character in ipairs(characters) do
             local x = index == 1 and 350 or 850
             local selected = index == Game.selectedCharacter
+            local cardY = 205
             love.graphics.setColor(selected and 1 or 0.55, selected and 0.85 or 0.55, 0.15, 1)
-            love.graphics.rectangle("line", x - 135, 220, 270, 310, 5)
+            love.graphics.setLineWidth(selected and 5 or 2)
+            love.graphics.rectangle("line", x - 150, cardY, 300, 340, 8, 8)
             love.graphics.setColor(1, 1, 1)
-            local image = assets.characters[index].walk[1]
-            local spriteScale = math.min(220 / image:getWidth(), 220 / image:getHeight())
-            love.graphics.draw(image, x - image:getWidth() * spriteScale / 2, 270, 0, spriteScale, spriteScale)
-            drawCentered("", 0, assets.font)
-            love.graphics.printf(character.name, x - 135, 500, 270, "center")
+            local image = assets.characters[index].idle
+            local spriteScale = math.min(190 / image:getWidth(), 220 / image:getHeight())
+            love.graphics.draw(image, x, cardY + 150, 0, spriteScale, spriteScale, image:getWidth() / 2, image:getHeight() / 2)
+            love.graphics.setFont(assets.font)
+            love.graphics.printf(character.name, x - 135, 475, 270, "center")
+            love.graphics.setColor(1, 1, 1, 0.65)
+            love.graphics.setFont(assets.smallFont)
+            love.graphics.printf(index == 1 and "Soco" or "Intangivel", x - 125, 515, 250, "center")
+            love.graphics.setFont(assets.font)
         end
+        love.graphics.setLineWidth(1)
         love.graphics.setColor(1, 1, 1)
-        drawCentered("← → para selecionar    ENTER para começar", 610, assets.font)
-    elseif Game.state == "playing" then
+        drawCentered("← → / analógico para selecionar | ENTER/A começar", 610, assets.font)
+    elseif Game.state == "credits" then
+        love.graphics.setColor(1, 1, 1)
+        drawCentered("CREDITOS", 90, assets.titleFont)
+        drawCentered("Criado por", 180, assets.font)
+        for index, name in ipairs(CREDITS) do
+            love.graphics.printf(name, 0, 225 + index * 42, Game.width, "center")
+        end
+        love.graphics.setColor(1, 1, 1, 0.8)
+        drawCentered("ENTER/A ou ESC/B para voltar", 650, assets.font)
+    elseif Game.state == "ending" then
+        love.graphics.setColor(1, 1, 1)
+        drawCentered("FIM DE JOGO", 115, assets.titleFont)
+        drawCentered("A pista foi salva e a festa continua!", 220, assets.font)
+        drawCentered("Obrigado por jogar Saws and Parties", 285, assets.font)
+        drawCentered("Antony Rafael, Vitor Presot, Bruno Nunes, Vinicius Lucena,", 390, assets.font)
+        drawCentered("Rafael Lisboa, Wallace Pedroso, Luis Gustavo e Lucas Mota", 430, assets.font)
+        love.graphics.setColor(1, 1, 1, 0.8)
+        drawCentered("ENTER/A ou ESC/B para pular", 650, assets.font)
+    elseif Game.state == "playing" or Game.state == "countdown"
+        or Game.state == "boss" or Game.state == "bossCountdown" then
+        love.graphics.setColor(1, 1, 1, 1)
         for _, coin in ipairs(coins) do
             local image = currentFrame(assets.coins, 12)
+            love.graphics.setColor(1.0, 0.8, 0.1, 0.22)
+            love.graphics.circle(
+                "fill",
+                coin.x + coin.width / 2,
+                coin.y + coin.height / 2,
+                math.max(coin.width, coin.height) * 0.9
+            )
+            love.graphics.setColor(1, 1, 1, 1)
             love.graphics.draw(image, coin.x, coin.y, 0, coin.width / image:getWidth(), coin.height / image:getHeight())
         end
         for _, saw in ipairs(saws) do
             local image = currentFrame(assets.saws, 10)
             love.graphics.draw(image, saw.x, saw.y, 0, saw.width / image:getWidth(), saw.height / image:getHeight())
         end
-        local image = playerImage()
-        local imageWidth = image:getWidth() * player.scale
-        local imageHeight = image:getHeight() * player.scale
-        local drawX = player.x + (player.renderWidth - imageWidth) / 2
-        local drawY = player.y + (player.renderHeight - imageHeight) / 2
-        if player.facing == -1 then
-            drawX = player.x + player.renderWidth - (player.renderWidth - imageWidth) / 2
+        if Game.state == "boss" or Game.state == "bossCountdown" then
+            drawBoss()
+            for _, saw in ipairs(bossSaws) do
+                local image = currentFrame(assets.saws, 12)
+                love.graphics.draw(
+                    image,
+                    saw.x + saw.width / 2,
+                    saw.y + saw.height / 2,
+                    saw.angle,
+                    saw.width / image:getWidth(),
+                    saw.height / image:getHeight(),
+                    image:getWidth() / 2,
+                    image:getHeight() / 2
+                )
+            end
         end
-        love.graphics.draw(
-            image,
-            drawX,
-            drawY,
-            0,
-            player.scale * player.facing,
-            player.scale
-        )
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle("fill", 0, 0, Game.width, 55)
+        local function drawPlayer(target)
+            local image = playerImage(target)
+            local centerX, centerY = playerCenter(target)
+            local alpha = target.alive and (target.character == 2 and target.abilityActive and 0.42 or 1) or 0.18
+            love.graphics.setColor(1, 1, 1, alpha)
+            love.graphics.draw(image, centerX, centerY, 0,
+                target.facing < 0 and -target.scale or target.scale, target.scale,
+                image:getWidth() / 2, image:getHeight() / 2)
+        end
+        drawPlayer(player)
+        if player2 then drawPlayer(player2) end
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.setColor(0.015, 0.01, 0.06, 0.88)
+        love.graphics.rectangle("fill", 12, 10, Game.width - 24, 86, 10, 10)
+        love.graphics.setColor(0.2, 0.8, 1, 0.55)
+        love.graphics.rectangle("line", 12, 10, Game.width - 24, 86, 10, 10)
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(assets.font)
-        love.graphics.print(("Fase: %d/4"):format(Game.level), 24, 14)
-        love.graphics.printf(("Moedas: %d/12"):format(Game.coins), 0, 14, Game.width, "center")
-        love.graphics.printf(("Tempo: %d"):format(math.ceil(Game.timeLeft)), -24, 14, Game.width, "right")
-        if Game.paused then
+        local stageLabel = (Game.state == "boss" or Game.state == "bossCountdown")
+            and "BOSS FINAL" or (Game.mode == "infinite"
+                and ("INFINITO - RODADA %d"):format(Game.infiniteRound)
+                or ("FASE %d/6"):format(Game.level))
+        love.graphics.print(stageLabel, 32, 19)
+        local coinGoal = Game.mode == "infinite" and Game.infiniteGoal or 12
+        love.graphics.printf(("MOEDAS %d/%d"):format(Game.coins, coinGoal), 0, 19, Game.width, "center")
+        local displayedTime = Game.state == "boss" and Game.bossTime or Game.timeLeft
+        love.graphics.printf(("TEMPO %d"):format(math.ceil(displayedTime)), -32, 19, Game.width, "right")
+        local function drawAbilityHud(target, x, label)
+            local status = target.abilityActive and "ATIVA"
+                or (target.abilityCooldown > 0 and ("%.1fs"):format(target.abilityCooldown) or "PRONTA")
+            local color = not target.alive and {0.5, 0.5, 0.5} or target.abilityActive and {0.2, 1, 0.3} or
+                (target.abilityCooldown > 0 and {1, 0.2, 0.2} or {1, 0.85, 0.25})
+            love.graphics.setColor(color[1], color[2], color[3], 1)
+            love.graphics.print(label .. ": " .. status, x, 48)
+            local progress = target.abilityActive and 1 or 1 - target.abilityCooldown / 6
+            love.graphics.setColor(0.08, 0.08, 0.15, 1)
+            love.graphics.rectangle("fill", x, 70, 150, 8)
+            love.graphics.setColor(color[1], color[2], color[3], 1)
+            love.graphics.rectangle("fill", x, 70, 150 * progress, 8)
+        end
+        drawAbilityHud(player, 32, player.character == 1 and "Soco" or "Intangivel")
+        if player2 then
+            drawAbilityHud(player2, 690, player2.character == 1 and "Soco" or "Intangivel")
+        end
+        if Game.state == "countdown" or Game.state == "bossCountdown" then
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
+            love.graphics.setColor(1, 1, 1, 1)
+            drawCentered(Game.state == "bossCountdown" and "BOSS FINAL" or "PREPARE-SE", 220, assets.font)
+            drawCentered(tostring(math.ceil(Game.countdown)), 275, assets.titleFont)
+        elseif Game.paused then
             love.graphics.setColor(0, 0, 0, 0.7)
             love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
             love.graphics.setColor(1, 1, 1)
@@ -565,7 +1563,7 @@ function love.draw()
         love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
         love.graphics.setColor(1, 1, 1)
         drawCentered(Game.statusMessage, 270, assets.titleFont)
-        drawCentered("ENTER para voltar à seleção", 370, assets.font)
+        drawCentered("ENTER/A para voltar à seleção", 370, assets.font)
     end
 
     love.graphics.pop()
