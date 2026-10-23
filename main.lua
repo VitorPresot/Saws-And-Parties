@@ -555,6 +555,7 @@ local function createPlayer(character, x, y)
         abilityTimer = 0,
         abilityCooldown = 0,
         abilityActive = false,
+        alive = true,
     }
 end
 
@@ -750,6 +751,7 @@ function love.load()
     assets.coins = loadImages(coinFrames)
     assets.saws = loadImages(sawFrames)
     assets.font = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 24)
+    assets.smallFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 16)
     assets.titleFont = love.graphics.newFont("datafiles/HomeVideo-BLG6G.ttf", 52)
     assets.musicTracks = {
         love.audio.newSource("sounds/Final_Quarter_Dash.mp3", "stream"),
@@ -973,6 +975,10 @@ local function readMovement(scheme)
         return (love.keyboard.isDown("right") and 1 or 0) - (love.keyboard.isDown("left") and 1 or 0),
             (love.keyboard.isDown("down") and 1 or 0) - (love.keyboard.isDown("up") and 1 or 0)
     end
+    if scheme == "wasd" then
+        return (love.keyboard.isDown("d") and 1 or 0) - (love.keyboard.isDown("a") and 1 or 0),
+            (love.keyboard.isDown("s") and 1 or 0) - (love.keyboard.isDown("w") and 1 or 0)
+    end
     local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0)
         - (love.keyboard.isDown("left", "a") and 1 or 0)
     local vertical = (love.keyboard.isDown("down", "s") and 1 or 0)
@@ -1013,6 +1019,9 @@ local function readMovement(scheme)
 end
 
 local function movePlayer(dt, target, scheme)
+    if not target or not target.alive then
+        return
+    end
     local horizontal, vertical = readMovement(scheme)
     local length = math.sqrt(horizontal * horizontal + vertical * vertical)
     target.moving = length > 0
@@ -1053,6 +1062,24 @@ local function repelSawFromPlayer(saw, target)
     target.abilityTimer = 0
 end
 
+local function eliminatePlayer(target, message)
+    if not target or not target.alive then
+        return
+    end
+    target.alive = false
+    target.moving = false
+    target.abilityActive = false
+    if Game.mode ~= "coop" then
+        Game.state = "gameover"
+        Game.statusMessage = message
+        stopMusic()
+    elseif not (player and player.alive) and not (player2 and player2.alive) then
+        Game.state = "gameover"
+        Game.statusMessage = "Os dois jogadores foram derrotados."
+        stopMusic()
+    end
+end
+
 local function spawnBossWave()
     local baseAngle = Game.animationTime * 0.7
     for index = 0, 3 do
@@ -1091,30 +1118,24 @@ local function updateBoss(dt)
         saw.life = saw.life + dt
         if saw.life > 7 or saw.x < -80 or saw.x > Game.width + 80 or saw.y < -80 or saw.y > Game.height + 80 then
             table.remove(bossSaws, index)
-        elseif circleOverlapsRectangle(
+        elseif player.alive and circleOverlapsRectangle(
             saw.x + saw.width / 2,
             saw.y + saw.height / 2,
             bossSawRadius(saw),
             playerHitbox()
         ) then
-            if player.character == 1 and player.abilityActive then
+            if player.alive and player.character == 1 and player.abilityActive then
                 repelSawFromPlayer(saw, player)
-            elseif not (player.character == 2 and player.abilityActive) then
-                Game.state = "gameover"
-                Game.statusMessage = "A motosserra venceu!"
-                stopMusic()
-                return
+            elseif player.alive and not (player.character == 2 and player.abilityActive) then
+                eliminatePlayer(player, "O jogador foi derrotado.")
             end
-        elseif player2 and circleOverlapsRectangle(
+        elseif player2 and player2.alive and circleOverlapsRectangle(
             saw.x + saw.width / 2, saw.y + saw.height / 2, bossSawRadius(saw), playerHitbox(player2)
         ) then
-            if player2.character == 1 and player2.abilityActive then
+            if player2.alive and player2.character == 1 and player2.abilityActive then
                 repelSawFromPlayer(saw, player2)
-            elseif not (player2.character == 2 and player2.abilityActive) then
-                Game.state = "gameover"
-                Game.statusMessage = "A motosserra venceu!"
-                stopMusic()
-                return
+            elseif player2.alive and not (player2.character == 2 and player2.abilityActive) then
+                eliminatePlayer(player2, "O jogador foi derrotado.")
             end
         end
     end
@@ -1203,25 +1224,22 @@ function love.update(dt)
             saw.vy = -saw.vy
             saw.y = clamp(saw.y, 60, Game.height - saw.height)
         end
-        local hitTarget = overlaps(playerHitbox(), sawHitbox(saw)) and player
-        if not hitTarget and player2 and overlaps(playerHitbox(player2), sawHitbox(saw)) then
+        local hitTarget = player.alive and overlaps(playerHitbox(), sawHitbox(saw)) and player
+        if not hitTarget and player2 and player2.alive and overlaps(playerHitbox(player2), sawHitbox(saw)) then
             hitTarget = player2
         end
         if hitTarget then
             if hitTarget.character == 1 and hitTarget.abilityActive then
                 repelSawFromPlayer(saw, hitTarget)
             elseif not (hitTarget.character == 2 and hitTarget.abilityActive) then
-                Game.state = "gameover"
-                Game.statusMessage = "Game Over!"
-                stopMusic()
-                return
+                eliminatePlayer(hitTarget, "O jogador foi derrotado.")
             end
         end
     end
 
     for index = #coins, 1, -1 do
-        if overlaps(playerHitbox(), coinHitbox(coins[index]))
-            or (player2 and overlaps(playerHitbox(player2), coinHitbox(coins[index]))) then
+        if (player.alive and overlaps(playerHitbox(), coinHitbox(coins[index])))
+            or (player2 and player2.alive and overlaps(playerHitbox(player2), coinHitbox(coins[index]))) then
             table.remove(coins, index)
             Game.coins = Game.coins + 1
             play(assets.coinSound)
@@ -1333,7 +1351,9 @@ function love.draw()
             love.graphics.draw(image, x, cardY + 150, 0, spriteScale, spriteScale, image:getWidth() / 2, image:getHeight() / 2)
             love.graphics.printf(character.name, x - 135, 475, 270, "center")
             love.graphics.setColor(1, 1, 1, 0.65)
+            love.graphics.setFont(assets.smallFont)
             love.graphics.printf(index == 1 and "Soco" or "Intangivel", x - 125, 515, 250, "center")
+            love.graphics.setFont(assets.font)
         end
         love.graphics.setLineWidth(1)
         love.graphics.setColor(1, 1, 1)
@@ -1394,8 +1414,8 @@ function love.draw()
         local function drawPlayer(target)
             local image = playerImage(target)
             local centerX, centerY = playerCenter(target)
-            love.graphics.setColor(target.character == 2 and target.abilityActive and 1 or 1,
-                1, 1, target.character == 2 and target.abilityActive and 0.42 or 1)
+            local alpha = target.alive and (target.character == 2 and target.abilityActive and 0.42 or 1) or 0.18
+            love.graphics.setColor(1, 1, 1, alpha)
             love.graphics.draw(image, centerX, centerY, 0,
                 target.facing < 0 and -target.scale or target.scale, target.scale,
                 image:getWidth() / 2, image:getHeight() / 2)
@@ -1421,19 +1441,19 @@ function love.draw()
         local function drawAbilityHud(target, x, label)
             local status = target.abilityActive and "ATIVA"
                 or (target.abilityCooldown > 0 and ("%.1fs"):format(target.abilityCooldown) or "PRONTA")
-            local color = target.abilityActive and {0.2, 1, 0.3} or
+            local color = not target.alive and {0.5, 0.5, 0.5} or target.abilityActive and {0.2, 1, 0.3} or
                 (target.abilityCooldown > 0 and {1, 0.2, 0.2} or {1, 0.85, 0.25})
             love.graphics.setColor(color[1], color[2], color[3], 1)
             love.graphics.print(label .. ": " .. status, x, 48)
             local progress = target.abilityActive and 1 or 1 - target.abilityCooldown / 6
             love.graphics.setColor(0.08, 0.08, 0.15, 1)
-            love.graphics.rectangle("fill", x + 220, 53, 150, 8)
+            love.graphics.rectangle("fill", x, 53, 150, 8)
             love.graphics.setColor(color[1], color[2], color[3], 1)
-            love.graphics.rectangle("fill", x + 220, 53, 150 * progress, 8)
+            love.graphics.rectangle("fill", x, 53, 150 * progress, 8)
         end
-        drawAbilityHud(player, 32, "P1 " .. (player.character == 1 and "Soco" or "Intangivel"))
+        drawAbilityHud(player, 32, player.character == 1 and "Soco" or "Intangivel")
         if player2 then
-            drawAbilityHud(player2, 700, "P2 " .. (player2.character == 1 and "Soco" or "Intangivel"))
+            drawAbilityHud(player2, 690, player2.character == 1 and "Soco" or "Intangivel")
         end
         if Game.state == "countdown" or Game.state == "bossCountdown" then
             love.graphics.setColor(0, 0, 0, 0.5)
