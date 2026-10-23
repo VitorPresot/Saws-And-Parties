@@ -54,6 +54,10 @@ Antes de cada fase, uma contagem regressiva de 3, 2 e 1 prepara o jogador.
 As fases alternam entre as músicas `Final_Quarter_Dash.mp3` e
 `Frame_Perfect.mp3`, ambas reproduzidas em loop.
 
+O menu de jogo oferece os modos História, Infinito e 2 Jogadores. No modo
+cooperativo, o jogador 1 usa WASD e `Espaço`, enquanto o jogador 2 usa as
+setas e `V` para a habilidade.
+
 O menu possui opções para ligar/desligar música, alternar tela cheia e ver os
 créditos. A música `High_Score_Serenade.mp3` toca em loop no menu.
 
