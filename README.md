@@ -42,6 +42,9 @@ Wallace usa `Espaço` para ficar semitransparente e intangível por 1,5 segundo.
 Os botões `X` ou `Y` do gamepad ativam a habilidade do personagem.
 As habilidades possuem 6 segundos de recarga.
 
+Os sprites de caminhada e soco do Bruno usam a spritesheet recortada em
+`sprites/bruno_sheet`.
+
 Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do
 tempo acabar para avançar pelas seis fases. Depois da sexta fase, enfrente o
 boss final e sobreviva ao padrão coordenado de motosserras.

@@ -55,12 +55,22 @@ local CREDITS = {
 local characters = {
     {
         name = "Bruno",
-        idle = "sprites/sPersonagem2/b6bfda77-a011-4736-98f2-588dfa55bdf5.png",
+        idle = "sprites/bruno_sheet/walk_01.png",
         walk = {
-            "sprites/sPersonagemCorre2/f9944722-b388-4d94-bf51-8fce15ca37c0.png",
-            "sprites/sPersonagemCorre2/aecc1f46-2542-42b7-8267-12ccdd2b5520.png",
-            "sprites/sPersonagemCorre2/3f3b3436-6192-48e9-bc60-649e8f3a4234.png",
-            "sprites/sPersonagemCorre2/0e76ca2a-0dc4-48e9-b593-214800769c36.png",
+            "sprites/bruno_sheet/walk_01.png",
+            "sprites/bruno_sheet/walk_02.png",
+            "sprites/bruno_sheet/walk_03.png",
+            "sprites/bruno_sheet/walk_04.png",
+            "sprites/bruno_sheet/walk_05.png",
+            "sprites/bruno_sheet/walk_06.png",
+        },
+        punch = {
+            "sprites/bruno_sheet/punch_01.png",
+            "sprites/bruno_sheet/punch_02.png",
+            "sprites/bruno_sheet/punch_03.png",
+            "sprites/bruno_sheet/punch_04.png",
+            "sprites/bruno_sheet/punch_05.png",
+            "sprites/bruno_sheet/punch_06.png",
         },
     },
     {
@@ -72,6 +82,7 @@ local characters = {
             "sprites/sPersonagemCorre/70316423-7fe7-406f-9776-2f80ccbd2f1b.png",
             "sprites/sPersonagemCorre/98977d47-47d7-4ec7-83ef-ceeb4a410cd4.png",
         },
+        punch = {},
     },
 }
 
@@ -201,7 +212,9 @@ end
 local function playerImage(target)
     target = target or player
     local characterAssets = assets.characters[target.character or Game.selectedCharacter]
-    if target.moving then
+    if target.abilityActive and target.character == 1 and #characterAssets.punch > 0 then
+        return currentFrame(characterAssets.punch, 14)
+    elseif target.moving then
         return currentFrame(characterAssets.walk, 9)
     end
     return characterAssets.idle
@@ -539,6 +552,10 @@ local function createPlayer(character, x, y)
         renderWidth = math.max(renderWidth, image:getWidth())
         renderHeight = math.max(renderHeight, image:getHeight())
     end
+    for _, image in ipairs(characterAssets.punch) do
+        renderWidth = math.max(renderWidth, image:getWidth())
+        renderHeight = math.max(renderHeight, image:getHeight())
+    end
     renderWidth = renderWidth * spriteScale
     renderHeight = renderHeight * spriteScale
     return {
@@ -746,7 +763,11 @@ function love.load()
     love.math.setRandomSeed(os.time())
     assets.characters = {}
     for index, character in ipairs(characters) do
-        assets.characters[index] = { idle = loadImage(character.idle), walk = loadImages(character.walk) }
+        assets.characters[index] = {
+            idle = loadImage(character.idle),
+            walk = loadImages(character.walk),
+            punch = loadImages(character.punch),
+        }
     end
     assets.coins = loadImages(coinFrames)
     assets.saws = loadImages(sawFrames)
