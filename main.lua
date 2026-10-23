@@ -937,7 +937,7 @@ function love.keypressed(key)
         return
     end
 
-    if (Game.state == "playing" or Game.state == "boss") and key == "space" then
+    if (Game.state == "playing" or Game.state == "boss") and (key == "space" or key == "x") then 
         activateAbility(player)
         return
     end
@@ -1072,14 +1072,22 @@ local function readMovement(scheme)
         return (love.keyboard.isDown("right") and 1 or 0) - (love.keyboard.isDown("left") and 1 or 0),
             (love.keyboard.isDown("down") and 1 or 0) - (love.keyboard.isDown("up") and 1 or 0)
     end
-    if scheme == "wasd" then
+
+    local horizontal
+    local vertical
+    if scheme == "gamepad" then
+        horizontal = (love.keyboard.isDown("d") and 1 or 0) - (love.keyboard.isDown("a") and 1 or 0)
+        vertical = (love.keyboard.isDown("s") and 1 or 0) - (love.keyboard.isDown("w") and 1 or 0)
+    elseif scheme == "wasd" then
         return (love.keyboard.isDown("d") and 1 or 0) - (love.keyboard.isDown("a") and 1 or 0),
             (love.keyboard.isDown("s") and 1 or 0) - (love.keyboard.isDown("w") and 1 or 0)
+    else
+        horizontal = (love.keyboard.isDown("right", "d") and 1 or 0)
+            - (love.keyboard.isDown("left", "a") and 1 or 0)
+        vertical = (love.keyboard.isDown("down", "s") and 1 or 0)
+            - (love.keyboard.isDown("up", "w") and 1 or 0)
     end
-    local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0)
-        - (love.keyboard.isDown("left", "a") and 1 or 0)
-    local vertical = (love.keyboard.isDown("down", "s") and 1 or 0)
-        - (love.keyboard.isDown("up", "w") and 1 or 0)
+
     local gamepadHorizontal = gamepadAxis("leftx")
     local gamepadVertical = gamepadAxis("lefty")
     if gamepad then
@@ -1199,7 +1207,7 @@ end
 local function updateBoss(dt)
     Game.bossTime = Game.bossTime - dt
     bossSpawnTimer = bossSpawnTimer - dt
-    movePlayer(dt, player, "coop" == Game.mode and "wasd" or nil)
+    movePlayer(dt, player, "coop" == Game.mode and "gamepad" or nil)
     if player2 then
         movePlayer(dt, player2, "arrows")
     end
@@ -1306,7 +1314,7 @@ function love.update(dt)
         return
     end
 
-    movePlayer(dt, player, Game.mode == "coop" and "wasd" or nil)
+    movePlayer(dt, player, Game.mode == "coop" and "gamepad" or nil)
     if player2 then
         movePlayer(dt, player2, "arrows")
     end
