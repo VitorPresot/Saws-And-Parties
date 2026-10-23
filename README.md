@@ -46,6 +46,10 @@ Cada fase possui 12 moedas e serras móveis. Colete todas as moedas antes do
 tempo acabar para avançar pelas seis fases. Depois da sexta fase, enfrente o
 boss final e sobreviva ao padrão coordenado de motosserras.
 
+O menu também inclui **Modo Infinito**. Ele começa com poucas moedas e serras
+lentas, e aumenta continuamente a meta de moedas, a quantidade de obstáculos,
+a velocidade das serras e a pressão do cronômetro a cada rodada.
+
 Antes de cada fase, uma contagem regressiva de 3, 2 e 1 prepara o jogador.
 As fases alternam entre as músicas `Final_Quarter_Dash.mp3` e
 `Frame_Perfect.mp3`, ambas reproduzidas em loop.

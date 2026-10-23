@@ -17,6 +17,11 @@ local Game = {
     bossTime = 0,
     settingsIndex = 1,
     abilityCooldown = 0,
+    mode = "campaign",
+    infiniteRound = 1,
+    infiniteGoal = 0,
+    uiTime = 0,
+    transitionAlpha = 0,
 }
 
 local assets = {}
@@ -31,7 +36,7 @@ local gamepad
 local gamepadSelectionRepeat = 0
 
 local GAMEPAD_DEADZONE = 0.2
-local MENU_ITEMS = {"JOGAR", "CONFIGURACOES", "CREDITOS", "SAIR"}
+local MENU_ITEMS = {"JOGAR", "MODO INFINITO", "CONFIGURACOES", "CREDITOS", "SAIR"}
 local SETTINGS_ITEMS = {"MUSICA", "TELA CHEIA", "TECLAS", "CONTROLADOR", "VOLTAR"}
 local CREDITS = {
     "Antony Rafael",
@@ -310,10 +315,12 @@ local function playMenuMusic()
 end
 
 local function menuLabel(index)
-    if index == 2 then
-        return "MUSICA: " .. (Game.musicEnabled and "LIGADA" or "DESLIGADA")
-    end
     return MENU_ITEMS[index]
+end
+
+local function beginTransition()
+    Game.transitionAlpha = 0.8
+    Game.uiTime = 0
 end
 
 local function goToMenu()
@@ -322,21 +329,31 @@ local function goToMenu()
     Game.menuIndex = 1
     Game.statusMessage = nil
     playMenuMusic()
+    beginTransition()
 end
 
 local function activateMenuItem()
     if Game.menuIndex == 1 then
+        Game.mode = "campaign"
         Game.state = "select"
         stopMusic()
+        beginTransition()
     elseif Game.menuIndex == 2 then
+        Game.mode = "infinite"
+        Game.state = "select"
+        stopMusic()
+        beginTransition()
+    elseif Game.menuIndex == 3 then
         Game.state = "settings"
         Game.settingsIndex = 1
         playMenuMusic()
-    elseif Game.menuIndex == 3 then
+        beginTransition()
+    elseif Game.menuIndex == 4 then
         Game.state = "credits"
         Game.creditsTime = 0
         playMenuMusic()
-    elseif Game.menuIndex == 4 then
+        beginTransition()
+    elseif Game.menuIndex == 5 then
         love.event.quit()
     end
 end
@@ -389,11 +406,44 @@ end
 
 local function spawnCoin()
     local image = assets.coins[1]
+    local width = image:getWidth() * 1.65
+    local height = image:getHeight() * 1.65
+    local playerCenterX, playerCenterY = playerCenter()
+    for _ = 1, 80 do
+        local coin = {
+            x = love.math.random(60, Game.width - width - 60),
+            y = love.math.random(95, Game.height - height - 45),
+            width = width,
+            height = height,
+        }
+        local centerX = coin.x + width / 2
+        local centerY = coin.y + height / 2
+        if distance(centerX, centerY, playerCenterX, playerCenterY) >= 130 then
+            local overlapsCoin = false
+            for _, existingCoin in ipairs(coins) do
+                if overlaps(coin, existingCoin) then
+                    overlapsCoin = true
+                    break
+                end
+            end
+            if not overlapsCoin then
+                return coin
+            end
+        end
+    end
+    return {x = 80, y = 110, width = width, height = height}
+end
+
+local function coinHitbox(coin)
+    local image = currentFrame(assets.coins, 12)
+    local bounds = spriteBounds[image]
+    local scaleX = coin.width / image:getWidth()
+    local scaleY = coin.height / image:getHeight()
     return {
-        x = love.math.random(80, Game.width - 80),
-        y = love.math.random(120, Game.height - 80),
-        width = image:getWidth() * 1.3,
-        height = image:getHeight() * 1.3,
+        x = coin.x + bounds.x * scaleX,
+        y = coin.y + bounds.y * scaleY,
+        width = bounds.width * scaleX,
+        height = bounds.height * scaleY,
     }
 end
 
@@ -447,7 +497,8 @@ local function spawnSaw(index, isStatic)
         local dx = sawCenterX - playerCenterX
         local dy = sawCenterY - playerCenterY
         local length = math.max(1, math.sqrt(dx * dx + dy * dy))
-        local speed = 125 + Game.level * 30 + index * 12
+        local difficulty = Game.mode == "infinite" and Game.infiniteRound or Game.level
+        local speed = 125 + difficulty * 30 + index * 12
         local direction = love.math.random() < 0.5 and -1 or 1
         local awayX = dx / length
         local awayY = dy / length
@@ -459,9 +510,11 @@ end
 
 local function startLevel(level)
     Game.state = "countdown"
+    beginTransition()
     Game.level = level
     Game.coins = 0
-    Game.timeLeft = level == 1 and 35 or 30
+    Game.timeLeft = Game.mode == "infinite" and math.max(16, 34 - Game.infiniteRound * 0.45)
+        or (level == 1 and 35 or 30)
     Game.paused = false
     Game.countdown = 3
     Game.countdownMode = "level"
@@ -492,21 +545,33 @@ local function startLevel(level)
     coins = {}
     saws = {}
 
-    for _ = 1, 12 do
+    local coinGoal = Game.mode == "infinite" and math.min(12, 3 + Game.infiniteRound) or 12
+    Game.infiniteGoal = coinGoal
+    for _ = 1, coinGoal do
         table.insert(coins, spawnCoin())
     end
-    for index = 1, level do
+    local movingSawCount = Game.mode == "infinite" and math.min(12, Game.infiniteRound) or level
+    for index = 1, movingSawCount do
         table.insert(saws, spawnSaw(index, false))
     end
-    for index = 1, math.min(5, 1 + math.floor(level / 2)) do
+    local staticSawCount = Game.mode == "infinite" and math.min(6, math.floor(Game.infiniteRound / 2))
+        or math.min(5, 1 + math.floor(level / 2))
+    for index = 1, staticSawCount do
         table.insert(saws, spawnSaw(index, true))
     end
 
     playMusic(assets.musicTracks[((level - 1) % #assets.musicTracks) + 1])
 end
 
+local function startInfiniteMode()
+    Game.mode = "infinite"
+    Game.infiniteRound = 1
+    startLevel(1)
+end
+
 local function startBoss()
     Game.state = "bossCountdown"
+    beginTransition()
     Game.level = 6
     Game.countdown = 3
     Game.countdownMode = "boss"
@@ -542,32 +607,36 @@ local function drawDiscoBackground(level)
     love.graphics.setColor(palette.base[1], palette.base[2], palette.base[3], 1)
     love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
 
-    local tileSize = 64
+    local tileSize = 72
     local firstRow = 1
     local lastRow = math.ceil(Game.height / tileSize)
     local lastColumn = math.ceil(Game.width / tileSize)
     for row = firstRow, lastRow do
         for column = 0, lastColumn do
             local pulse = math.sin(time * 4.5 + row * 0.8 + column * 1.35 + level)
-            local alternate = (row + column + level) % 2 == 0
-            local color = alternate and palette.primary or palette.secondary
-            local brightness = 0.1 + math.max(0, pulse) * 0.32
+            local colorPhase = (row * 3 + column * 5 + level) % 4
+            local colors = {
+                palette.primary,
+                palette.secondary,
+                {0.96, 0.25, 0.6},
+                {1.0, 0.72, 0.12},
+            }
+            local color = colors[colorPhase + 1]
+            local brightness = 0.18 + math.max(0, pulse) * 0.42
             local x = column * tileSize
             local y = row * tileSize
+            love.graphics.setColor(0.015, 0.01, 0.045, 1)
+            love.graphics.rectangle("fill", x + 2, y + 2, tileSize - 3, tileSize - 3)
+            love.graphics.setColor(color[1] * 0.35, color[2] * 0.35, color[3] * 0.35, 0.95)
+            love.graphics.rectangle("fill", x + 7, y + 7, tileSize - 13, tileSize - 13)
             love.graphics.setColor(color[1], color[2], color[3], brightness)
-            love.graphics.rectangle("fill", x + 2, y + 2, tileSize - 4, tileSize - 4)
-            love.graphics.setColor(color[1], color[2], color[3], 0.25)
-            love.graphics.rectangle("line", x, y, tileSize, tileSize)
+            love.graphics.rectangle("fill", x + 11, y + 11, tileSize - 21, tileSize - 21)
+            love.graphics.setColor(1, 1, 1, 0.18 + math.max(0, pulse) * 0.22)
+            love.graphics.rectangle("fill", x + 14, y + 14, tileSize - 27, 4)
+            love.graphics.rectangle("fill", x + 14, y + 14, 4, tileSize - 27)
+            love.graphics.setColor(color[1] * 0.55, color[2] * 0.55, color[3] * 0.55, 0.8)
+            love.graphics.rectangle("line", x + 7, y + 7, tileSize - 13, tileSize - 13)
         end
-    end
-
-    for index = 0, 7 do
-        local x = (index + 0.5) * Game.width / 8
-        local y = 210 + math.sin(time * 0.8 + index * 1.7) * 90
-        local radius = 70 + level * 5 + math.sin(time * 2 + index) * 12
-        local color = index % 2 == 0 and palette.primary or palette.secondary
-        love.graphics.setColor(color[1], color[2], color[3], 0.07)
-        love.graphics.circle("fill", x, y, radius)
     end
 
     love.graphics.setColor(1, 1, 1, 0.16)
@@ -707,7 +776,11 @@ function love.keypressed(key)
         elseif key == "right" or key == "d" then
             Game.selectedCharacter = 2
         elseif key == "return" or key == "space" then
-            startLevel(1)
+            if Game.mode == "infinite" then
+                startInfiniteMode()
+            else
+                startLevel(1)
+            end
         elseif key == "escape" then
             goToMenu()
         end
@@ -784,7 +857,11 @@ function love.gamepadpressed(joystick, button)
         elseif button == "dpright" or button == "rightshoulder" then
             goToNextCharacter()
         elseif gamepadConfirm(button) then
-            startLevel(1)
+            if Game.mode == "infinite" then
+                startInfiniteMode()
+            else
+                startLevel(1)
+            end
         elseif button == "b" or button == "back" then
             goToMenu()
         end
@@ -978,6 +1055,8 @@ end
 
 function love.update(dt)
     Game.animationTime = Game.animationTime + dt
+    Game.uiTime = Game.uiTime + dt
+    Game.transitionAlpha = math.max(0, Game.transitionAlpha - dt * 1.8)
 
     if Game.state == "select" and gamepad then
         local horizontal = gamepadAxis("leftx")
@@ -1060,12 +1139,15 @@ function love.update(dt)
     end
 
     for index = #coins, 1, -1 do
-        if overlaps(playerHitbox(), coins[index]) then
+        if overlaps(playerHitbox(), coinHitbox(coins[index])) then
             table.remove(coins, index)
             Game.coins = Game.coins + 1
             play(assets.coinSound)
-            if Game.coins == 12 then
-                if Game.level == 6 then
+            if Game.coins == Game.infiniteGoal then
+                if Game.mode == "infinite" then
+                    Game.infiniteRound = Game.infiniteRound + 1
+                    startLevel(1)
+                elseif Game.level == 6 then
                     startBoss()
                 else
                     startLevel(Game.level + 1)
@@ -1098,12 +1180,15 @@ function love.draw()
         drawCentered("DISCOTECA DE SOBREVIVENCIA", 135, assets.font)
         for index = 1, #MENU_ITEMS do
             local selected = index == Game.menuIndex
+            local y = 245 + index * 48
+            local entryOffset = math.max(0, 0.55 - Game.uiTime) * (6 - index) * 24
+            local pulse = selected and math.sin(Game.uiTime * 5) * 3 or 0
             if selected then
                 love.graphics.setColor(0.1, 0.8, 1, 0.18)
-                love.graphics.rectangle("fill", 380, 235 + index * 48, 520, 44, 8, 8)
+                love.graphics.rectangle("fill", 380 - pulse, y - 10 - entryOffset, 520 + pulse * 2, 44, 8, 8)
             end
             love.graphics.setColor(selected and 1 or 0.65, selected and 0.85 or 0.65, selected and 0.2 or 0.9, 1)
-            love.graphics.printf(menuLabel(index), 420, 245 + index * 48, 440, "center")
+            love.graphics.printf(menuLabel(index), 420, y - entryOffset, 440, "center")
         end
         love.graphics.setColor(1, 1, 1, 0.8)
         drawCentered("Setas/WASD ou D-pad para navegar | ENTER/A confirmar", 610, assets.font)
@@ -1227,21 +1312,31 @@ function love.draw()
             image:getHeight() / 2
         )
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle("fill", 0, 0, Game.width, 55)
+        love.graphics.setColor(0.015, 0.01, 0.06, 0.88)
+        love.graphics.rectangle("fill", 12, 10, Game.width - 24, 64, 10, 10)
+        love.graphics.setColor(0.2, 0.8, 1, 0.55)
+        love.graphics.rectangle("line", 12, 10, Game.width - 24, 64, 10, 10)
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(assets.font)
         local stageLabel = (Game.state == "boss" or Game.state == "bossCountdown")
-            and "BOSS FINAL" or ("Fase: %d/6"):format(Game.level)
-        love.graphics.print(stageLabel, 24, 14)
-        love.graphics.printf(("Moedas: %d/12"):format(Game.coins), 0, 14, Game.width, "center")
+            and "BOSS FINAL" or (Game.mode == "infinite"
+                and ("INFINITO - RODADA %d"):format(Game.infiniteRound)
+                or ("FASE %d/6"):format(Game.level))
+        love.graphics.print(stageLabel, 32, 19)
+        local coinGoal = Game.mode == "infinite" and Game.infiniteGoal or 12
+        love.graphics.printf(("MOEDAS %d/%d"):format(Game.coins, coinGoal), 0, 19, Game.width, "center")
         local displayedTime = Game.state == "boss" and Game.bossTime or Game.timeLeft
-        love.graphics.printf(("Tempo: %d"):format(math.ceil(displayedTime)), -24, 14, Game.width, "right")
+        love.graphics.printf(("TEMPO %d"):format(math.ceil(displayedTime)), -32, 19, Game.width, "right")
         local abilityLabel = Game.selectedCharacter == 1 and "Soco" or "Intangivel"
         local abilityStatus = player.abilityActive and "ATIVA"
             or (player.abilityCooldown > 0 and ("%.1fs"):format(player.abilityCooldown) or "PRONTA")
         love.graphics.setColor(1, 0.85, 0.25, 1)
-        love.graphics.print(abilityLabel .. ": " .. abilityStatus, 24, 42)
+        love.graphics.print(abilityLabel .. ": " .. abilityStatus, 32, 48)
+        local cooldownProgress = player.abilityActive and 1 or 1 - player.abilityCooldown / 6
+        love.graphics.setColor(0.08, 0.08, 0.15, 1)
+        love.graphics.rectangle("fill", 250, 53, 150, 8, 4, 4)
+        love.graphics.setColor(1, 0.75, 0.15, 1)
+        love.graphics.rectangle("fill", 250, 53, 150 * cooldownProgress, 8, 4, 4)
         if Game.state == "countdown" or Game.state == "bossCountdown" then
             love.graphics.setColor(0, 0, 0, 0.5)
             love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
@@ -1261,6 +1356,11 @@ function love.draw()
         love.graphics.setColor(1, 1, 1)
         drawCentered(Game.statusMessage, 270, assets.titleFont)
         drawCentered("ENTER/A para voltar à seleção", 370, assets.font)
+    end
+
+    if Game.transitionAlpha > 0 then
+        love.graphics.setColor(0.01, 0.005, 0.04, Game.transitionAlpha)
+        love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
     end
 
     love.graphics.pop()
