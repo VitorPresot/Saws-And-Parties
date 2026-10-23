@@ -543,6 +543,73 @@ local function spawnSaw(index, isStatic)
     return saw
 end
 
+local function spawnCornerSaw(index)
+    local image = assets.saws[1]
+    local width = image:getWidth() * 0.55
+    local height = image:getHeight() * 0.55
+    local margin = 30
+    local route = {
+        left = margin,
+        top = 78,
+        right = Game.width - margin - width,
+        bottom = Game.height - margin - height,
+    }
+    local perimeter = (route.right - route.left) * 2 + (route.bottom - route.top) * 2
+    return {
+        x = route.left,
+        y = route.top,
+        width = width,
+        height = height,
+        corner = true,
+        route = route,
+        routeDistance = (index - 1) * perimeter / 2,
+        routePerimeter = perimeter,
+        routeSpeed = 90 + (Game.mode == "infinite" and Game.infiniteRound or Game.level) * 8,
+        routeDirection = index % 2 == 0 and -1 or 1,
+        vx = 0,
+        vy = 0,
+    }
+end
+
+local function updateCornerSaw(saw, dt)
+    local route = saw.route
+    saw.routeDistance = (saw.routeDistance + saw.routeSpeed * saw.routeDirection * dt) % saw.routePerimeter
+    local distance = saw.routeDistance
+    local topLength = route.right - route.left
+    local rightLength = route.bottom - route.top
+
+    if distance <= topLength then
+        saw.x = route.left + distance
+        saw.y = route.top
+    elseif distance <= topLength + rightLength then
+        saw.x = route.right
+        saw.y = route.top + distance - topLength
+    elseif distance <= topLength * 2 + rightLength then
+        saw.x = route.right - (distance - topLength - rightLength)
+        saw.y = route.bottom
+    else
+        saw.x = route.left
+        saw.y = route.bottom - (distance - topLength * 2 - rightLength)
+    end
+end
+
+local function updateSaw(saw, dt)
+    if saw.corner then
+        updateCornerSaw(saw, dt)
+        return
+    end
+    saw.x = saw.x + saw.vx * dt
+    saw.y = saw.y + saw.vy * dt
+    if saw.x <= 0 or saw.x >= Game.width - saw.width then
+        saw.vx = -saw.vx
+        saw.x = clamp(saw.x, 0, Game.width - saw.width)
+    end
+    if saw.y <= 60 or saw.y >= Game.height - saw.height then
+        saw.vy = -saw.vy
+        saw.y = clamp(saw.y, 60, Game.height - saw.height)
+    end
+end
+
 local function createPlayer(character, x, y)
     local characterAssets = assets.characters[character]
     local spriteScale = 0.35
@@ -605,6 +672,15 @@ local function startLevel(level)
         or math.min(5, 1 + math.floor(level / 2))
     for index = 1, staticSawCount do
         table.insert(saws, spawnSaw(index, true))
+    end
+    local cornerSawCount = 0
+    if Game.mode == "infinite" then
+        cornerSawCount = Game.infiniteRound >= 3 and math.min(2, math.floor(Game.infiniteRound / 3)) or 0
+    elseif level == 2 or level == 4 or level == 6 then
+        cornerSawCount = level == 6 and 2 or 1
+    end
+    for index = 1, cornerSawCount do
+        table.insert(saws, spawnCornerSaw(index))
     end
 
     playMusic(assets.musicTracks[((level - 1) % #assets.musicTracks) + 1])
@@ -1077,6 +1153,7 @@ local function repelSawFromPlayer(saw, target)
     local force = 560
     saw.vx = (dx / length) * force
     saw.vy = (dy / length) * force
+    saw.corner = false
     saw.x = saw.x + (dx / length) * 18
     saw.y = saw.y + (dy / length) * 18
     target.abilityActive = false
@@ -1235,16 +1312,7 @@ function love.update(dt)
     end
 
     for _, saw in ipairs(saws) do
-        saw.x = saw.x + saw.vx * dt
-        saw.y = saw.y + saw.vy * dt
-        if saw.x <= 0 or saw.x >= Game.width - saw.width then
-            saw.vx = -saw.vx
-            saw.x = clamp(saw.x, 0, Game.width - saw.width)
-        end
-        if saw.y <= 60 or saw.y >= Game.height - saw.height then
-            saw.vy = -saw.vy
-            saw.y = clamp(saw.y, 60, Game.height - saw.height)
-        end
+        updateSaw(saw, dt)
         local hitTarget = player.alive and overlaps(playerHitbox(), sawHitbox(saw)) and player
         if not hitTarget and player2 and player2.alive and overlaps(playerHitbox(player2), sawHitbox(saw)) then
             hitTarget = player2

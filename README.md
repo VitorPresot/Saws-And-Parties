@@ -61,6 +61,9 @@ O menu de jogo oferece os modos História, Infinito e 2 Jogadores. No modo
 cooperativo, o jogador 1 usa WASD e `Espaço`, enquanto o jogador 2 usa as
 setas e `V` para a habilidade.
 
+Algumas fases também possuem serras de perímetro: elas ficam junto às paredes
+e percorrem continuamente o contorno retangular da pista.
+
 O menu possui opções para ligar/desligar música, alternar tela cheia e ver os
 créditos. A música `High_Score_Serenade.mp3` toca em loop no menu.
 
