@@ -716,54 +716,184 @@ local function drawCentered(text, y, font)
     love.graphics.printf(text, 0, y, Game.width, "center")
 end
 
+
 local function drawDiscoBackground(level)
-    local palettes = {
-        { base = {0.025, 0.01, 0.09}, primary = {0.95, 0.08, 0.55}, secondary = {0.18, 0.35, 1.0} },
-        { base = {0.01, 0.06, 0.08}, primary = {0.05, 0.95, 0.85}, secondary = {0.15, 0.35, 1.0} },
-        { base = {0.08, 0.015, 0.025}, primary = {1.0, 0.25, 0.04}, secondary = {1.0, 0.8, 0.08} },
-        { base = {0.04, 0.01, 0.09}, primary = {0.65, 0.15, 1.0}, secondary = {0.05, 0.95, 0.95} },
-    }
-    local palette = palettes[((level - 1) % #palettes) + 1]
     local time = Game.animationTime
 
-    love.graphics.setColor(palette.base[1], palette.base[2], palette.base[3], 1)
-    love.graphics.rectangle("fill", 0, 0, Game.width, Game.height)
+    local palettes = {
+        {wall = {0.12, 0.025, 0.18}, floor = {0.035, 0.015, 0.08},
+         a = {0.95, 0.12, 0.55}, b = {0.1, 0.65, 1.0}},
+        {wall = {0.015, 0.10, 0.16}, floor = {0.01, 0.025, 0.07},
+         a = {0.0, 0.95, 0.85}, b = {0.25, 0.3, 1.0}},
+        {wall = {0.18, 0.035, 0.025}, floor = {0.07, 0.015, 0.025},
+         a = {1.0, 0.2, 0.08}, b = {1.0, 0.75, 0.1}},
+        {wall = {0.09, 0.025, 0.2}, floor = {0.025, 0.01, 0.08},
+         a = {0.7, 0.15, 1.0}, b = {0.05, 0.9, 1.0}},
+    }
 
-    local tileSize = 72
-    local firstRow = 1
-    local lastRow = math.ceil(Game.height / tileSize)
-    local lastColumn = math.ceil(Game.width / tileSize)
-    for row = firstRow, lastRow do
-        for column = 0, lastColumn do
-            local pulse = math.sin(time * 4.5 + row * 0.8 + column * 1.35 + level)
-            local colorPhase = (row * 3 + column * 5 + level) % 4
-            local colors = {
-                palette.primary,
-                palette.secondary,
-                {0.96, 0.25, 0.6},
-                {1.0, 0.72, 0.12},
-            }
-            local color = colors[colorPhase + 1]
-            local brightness = 0.18 + math.max(0, pulse) * 0.42
-            local x = column * tileSize
-            local y = row * tileSize
-            love.graphics.setColor(0.035, 0.025, 0.09, 1)
-            love.graphics.rectangle("fill", x + 1, y + 1, tileSize - 1, tileSize - 1)
-            love.graphics.setColor(color[1] * 0.35, color[2] * 0.35, color[3] * 0.35, 0.95)
-            love.graphics.rectangle("fill", x + 4, y + 4, tileSize - 7, tileSize - 7)
-            love.graphics.setColor(color[1], color[2], color[3], brightness)
-            love.graphics.rectangle("fill", x + 7, y + 7, tileSize - 13, tileSize - 13)
-            love.graphics.setColor(1, 1, 1, 0.18 + math.max(0, pulse) * 0.22)
-            love.graphics.rectangle("fill", x + 10, y + 10, tileSize - 20, 4)
-            love.graphics.rectangle("fill", x + 10, y + 10, 4, tileSize - 20)
-            love.graphics.setColor(color[1] * 0.55, color[2] * 0.55, color[3] * 0.55, 0.8)
-            love.graphics.rectangle("line", x + 4, y + 4, tileSize - 7, tileSize - 7)
+    local p = palettes[(level - 1) % #palettes + 1]
+
+    -- Fundo e paredes da discoteca
+    love.graphics.setColor(p.wall)
+    love.graphics.rectangle("fill", 0, 0, 1280, 720)
+
+    -- Painéis da parede
+    for x = 0, 1280, 80 do
+        love.graphics.setColor(0.025, 0.015, 0.055)
+        love.graphics.rectangle("fill", x, 65, 5, 235)
+
+        local pulse = 0.35 + 0.25 * math.sin(time * 3 + x * 0.04)
+        love.graphics.setColor(p.a[1], p.a[2], p.a[3], pulse)
+        love.graphics.rectangle("fill", x + 12, 85, 4, 175)
+
+        love.graphics.setColor(p.b[1], p.b[2], p.b[3], pulse)
+        love.graphics.rectangle("fill", x + 23, 110, 4, 130)
+    end
+
+    -- Estrutura da cabine do DJ
+    love.graphics.setColor(0.025, 0.015, 0.045)
+    love.graphics.rectangle("fill", 430, 85, 420, 155)
+
+    love.graphics.setColor(p.a)
+    love.graphics.rectangle("fill", 445, 100, 390, 8)
+    love.graphics.rectangle("fill", 445, 210, 390, 8)
+
+    -- Painel luminoso atrás do DJ
+    love.graphics.setColor(0.08, 0.025, 0.12)
+    love.graphics.rectangle("fill", 470, 115, 340, 80)
+
+    for i = 0, 10 do
+        local h = 8 + math.abs(math.sin(time * 5 + i)) * 48
+        local hue = i % 3
+        if hue == 0 then
+            love.graphics.setColor(1, 0.1, 0.55)
+        elseif hue == 1 then
+            love.graphics.setColor(0.1, 0.8, 1)
+        else
+            love.graphics.setColor(0.8, 0.2, 1)
+        end
+        love.graphics.rectangle("fill", 485 + i * 29, 185 - h, 17, h)
+    end
+
+    -- Mesa do DJ
+    love.graphics.setColor(0.025, 0.02, 0.045)
+    love.graphics.rectangle("fill", 450, 205, 380, 45)
+    love.graphics.setColor(p.b)
+    love.graphics.rectangle("fill", 450, 205, 380, 5)
+
+    for i = 0, 7 do
+        local light = 0.5 + 0.5 * math.sin(time * 6 + i)
+        love.graphics.setColor(1, light * 0.4, 0.8, 1)
+        love.graphics.rectangle("fill", 465 + i * 47, 220, 20, 8)
+    end
+
+    -- Caixas de som nas laterais
+    for _, x in ipairs({55, 1080}) do
+        love.graphics.setColor(0.018, 0.012, 0.035)
+        love.graphics.rectangle("fill", x, 95, 145, 205)
+
+        love.graphics.setColor(p.a)
+        love.graphics.rectangle("line", x, 95, 145, 205)
+
+        for _, y in ipairs({135, 225}) do
+            love.graphics.setColor(0.08, 0.06, 0.12)
+            love.graphics.circle("fill", x + 72, y, 39)
+
+            love.graphics.setColor(p.b)
+            love.graphics.circle("line", x + 72, y, 31)
+
+            local pulse = 25 + math.sin(time * 7 + x + y) * 4
+            love.graphics.setColor(0.025, 0.02, 0.055)
+            love.graphics.circle("fill", x + 72, y, pulse)
+
+            love.graphics.setColor(p.a)
+            love.graphics.rectangle("fill", x + 66, y - 3, 12, 6)
         end
     end
 
-    love.graphics.setColor(1, 1, 1, 0.16)
-    love.graphics.rectangle("line", 8, 63, Game.width - 16, Game.height - 71)
+    -- Globos espelhados
+    local gx, gy = 640, 65
+    love.graphics.setColor(0.75, 0.85, 1)
+    love.graphics.circle("fill", gx, gy, 23)
+
+    for i = 0, 7 do
+        local angle = time * 1.5 + i * math.pi / 4
+        local x = gx + math.cos(angle) * 17
+        local y = gy + math.sin(angle) * 17
+        love.graphics.setColor(i % 2 == 0 and p.a or p.b)
+        love.graphics.rectangle("fill", x - 3, y - 3, 6, 6)
+    end
+
+    -- Feixes de luz na parede
+    for i = 0, 5 do
+        local x = 100 + i * 215
+        local angle = math.sin(time * 1.4 + i * 1.8) * 0.55
+        local endX = x + math.sin(angle) * 250
+
+        love.graphics.setColor(p.b[1], p.b[2], p.b[3], 0.15)
+        love.graphics.polygon("fill",
+            x - 9, 250,
+            x + 9, 250,
+            endX + 35, 440,
+            endX - 35, 440
+        )
+    end
+
+    -- Piso da pista de dança
+    love.graphics.setColor(p.floor)
+    love.graphics.rectangle("fill", 0, 300, 1280, 420)
+
+    local tile = 64
+    for row = 0, 6 do
+        for col = 0, 19 do
+            local x = col * tile
+            local y = 300 + row * tile
+            local alternate = (row + col) % 2 == 0
+            local pulse = 0.35 + 0.3 *
+                math.max(0, math.sin(time * 3 + row + col * 0.7))
+
+            if alternate then
+                love.graphics.setColor(0.06, 0.025, 0.11)
+            else
+                love.graphics.setColor(0.025, 0.015, 0.06)
+            end
+            love.graphics.rectangle("fill", x, y, tile, tile)
+
+            local color = alternate and p.a or p.b
+            love.graphics.setColor(
+                color[1], color[2], color[3], pulse
+            )
+            love.graphics.rectangle("fill", x + 5, y + 5, tile - 10, tile - 10)
+
+            love.graphics.setColor(0.04, 0.02, 0.08, 1)
+            love.graphics.rectangle("fill", x + 12, y + 12, tile - 24, tile - 24)
+        end
+    end
+
+    -- Contorno da pista
+    love.graphics.setColor(p.a)
+    love.graphics.rectangle("fill", 0, 295, 1280, 5)
+    love.graphics.rectangle("fill", 0, 300, 5, 420)
+    love.graphics.rectangle("fill", 1275, 300, 5, 420)
+
+    -- Luzes decorativas no teto
+    for i = 0, 15 do
+        local x = i * 80 + 20
+        local pulse = (math.sin(time * 5 + i) + 1) / 2
+
+        love.graphics.setColor(p.a[1], p.a[2], p.a[3], pulse)
+        love.graphics.rectangle("fill", x, 35, 30, 8)
+
+        love.graphics.setColor(p.b[1], p.b[2], p.b[3], pulse)
+        love.graphics.rectangle("fill", x + 5, 45, 20, 4)
+    end
+
+    -- Vinheta escura nas bordas para destacar os personagens
+    love.graphics.setColor(0.01, 0.005, 0.025, 0.3)
+    love.graphics.rectangle("fill", 0, 0, 25, 720)
+    love.graphics.rectangle("fill", 1255, 0, 25, 720)
 end
+
 
 local function drawMenuBackground()
     local time = Game.animationTime
