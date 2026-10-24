@@ -75,7 +75,7 @@ local characters = {
     },
     {
         name = "Wallace",
-        idle = "sprites/sPersonagem/db27aa64-5b19-4708-b584-4683e69978ef.png",
+        idle = "sprites/wallace_directions/south.png",
         directional = {
             south = "sprites/wallace_directions/south.png",
             east = "sprites/wallace_directions/east.png",
@@ -228,7 +228,7 @@ local function playerImage(target)
         return currentFrame(characterAssets.walk, 9)
     end
     if characterAssets.directional then
-        return characterAssets.directional[target.facing < 0 and "west" or "east"]
+        return characterAssets.directional[target.direction or "south"]
     end
     return characterAssets.idle
 end
@@ -238,8 +238,8 @@ local function playerHitbox(target)
     local image = playerImage(target)
     local characterAssets = assets.characters[target.character or Game.selectedCharacter]
     local bounds = spriteBounds[image]
-    local imageWidth = image:getWidth() * player.scale
-    local imageHeight = image:getHeight() * player.scale
+    local imageWidth = image:getWidth() * target.scale
+    local imageHeight = image:getHeight() * target.scale
     local drawLeft = target.x + (target.renderWidth - imageWidth) / 2
     local drawTop = target.y + (target.renderHeight - imageHeight) / 2
     local hitboxX = bounds.x
@@ -247,10 +247,10 @@ local function playerHitbox(target)
         hitboxX = image:getWidth() - bounds.x - bounds.width
     end
     return {
-        x = drawLeft + hitboxX * player.scale,
-        y = drawTop + bounds.y * player.scale,
-        width = bounds.width * player.scale,
-        height = bounds.height * player.scale,
+        x = drawLeft + hitboxX * target.scale,
+        y = drawTop + bounds.y * target.scale,
+        width = bounds.width * target.scale,
+        height = bounds.height * target.scale,
     }
 end
 
@@ -650,6 +650,7 @@ local function createPlayer(character, x, y)
         facing = 1,
         moving = false,
         character = character,
+        direction = "south",
         abilityTimer = 0,
         abilityCooldown = 0,
         abilityActive = false,
@@ -1152,6 +1153,20 @@ local function movePlayer(dt, target, scheme)
     local horizontal, vertical = readMovement(scheme)
     local length = math.sqrt(horizontal * horizontal + vertical * vertical)
     target.moving = length > 0
+    if assets.characters[target.character].directional and target.moving then
+        local diagonal = math.abs(horizontal) > 0.35 and math.abs(vertical) > 0.35
+        if diagonal then
+            if vertical < 0 then
+                target.direction = horizontal < 0 and "north-west" or "north-east"
+            else
+                target.direction = horizontal < 0 and "south-west" or "south-east"
+            end
+        elseif math.abs(vertical) > math.abs(horizontal) then
+            target.direction = vertical < 0 and "north" or "south"
+        else
+            target.direction = horizontal < 0 and "west" or "east"
+        end
+    end
     if math.abs(horizontal) > 0.01 then
         target.facing = horizontal
     end
