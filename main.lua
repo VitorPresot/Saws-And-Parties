@@ -224,11 +224,10 @@ local function playerImage(target)
     local characterAssets = assets.characters[target.character or Game.selectedCharacter]
     if target.abilityActive and target.character == 1 and #characterAssets.punch > 0 then
         return currentFrame(characterAssets.punch, 14)
+    elseif characterAssets.directional then
+        return characterAssets.directional[target.direction or "south"]
     elseif target.moving then
         return currentFrame(characterAssets.walk, 9)
-    end
-    if characterAssets.directional then
-        return characterAssets.directional[target.direction or "south"]
     end
     return characterAssets.idle
 end
