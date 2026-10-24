@@ -76,6 +76,16 @@ local characters = {
     {
         name = "Wallace",
         idle = "sprites/sPersonagem/db27aa64-5b19-4708-b584-4683e69978ef.png",
+        directional = {
+            south = "sprites/wallace_directions/south.png",
+            east = "sprites/wallace_directions/east.png",
+            north = "sprites/wallace_directions/north.png",
+            west = "sprites/wallace_directions/west.png",
+            ["south-east"] = "sprites/wallace_directions/south-east.png",
+            ["north-east"] = "sprites/wallace_directions/north-east.png",
+            ["north-west"] = "sprites/wallace_directions/north-west.png",
+            ["south-west"] = "sprites/wallace_directions/south-west.png",
+        },
         walk = {
             "sprites/sPersonagemCorre/d54994e5-094f-4699-8d11-e94f29bc5d0f.png",
             "sprites/sPersonagemCorre/e082ab22-e716-4833-82eb-1427fd9dc7de.png",
@@ -217,19 +227,23 @@ local function playerImage(target)
     elseif target.moving then
         return currentFrame(characterAssets.walk, 9)
     end
+    if characterAssets.directional then
+        return characterAssets.directional[target.facing < 0 and "west" or "east"]
+    end
     return characterAssets.idle
 end
 
 local function playerHitbox(target)
     target = target or player
     local image = playerImage(target)
+    local characterAssets = assets.characters[target.character or Game.selectedCharacter]
     local bounds = spriteBounds[image]
     local imageWidth = image:getWidth() * player.scale
     local imageHeight = image:getHeight() * player.scale
     local drawLeft = target.x + (target.renderWidth - imageWidth) / 2
     local drawTop = target.y + (target.renderHeight - imageHeight) / 2
     local hitboxX = bounds.x
-    if target.facing < 0 then
+    if not characterAssets.directional and target.facing < 0 then
         hitboxX = image:getWidth() - bounds.x - bounds.width
     end
     return {
@@ -841,6 +855,14 @@ function love.load()
     for index, character in ipairs(characters) do
         assets.characters[index] = {
             idle = loadImage(character.idle),
+            directional = character.directional and
+                setmetatable({}, {__index = function(directions, direction)
+                    local path = character.directional[direction]
+                    if not path then return nil end
+                    local image = loadImage(path)
+                    rawset(directions, direction, image)
+                    return image
+                end}) or nil,
             walk = loadImages(character.walk),
             punch = loadImages(character.punch),
         }
@@ -1515,7 +1537,8 @@ function love.draw()
             local alpha = target.alive and (target.character == 2 and target.abilityActive and 0.42 or 1) or 0.18
             love.graphics.setColor(1, 1, 1, alpha)
             love.graphics.draw(image, centerX, centerY, 0,
-                target.facing < 0 and -target.scale or target.scale, target.scale,
+                assets.characters[target.character].directional and target.scale
+                    or (target.facing < 0 and -target.scale or target.scale), target.scale,
                 image:getWidth() / 2, image:getHeight() / 2)
         end
         drawPlayer(player)
