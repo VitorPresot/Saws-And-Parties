@@ -84,6 +84,21 @@ local characters = {
         },
         punch = {},
     },
+    {
+        name = "Rafa",
+        idle = "sprites/Rafa_Sheet/andar1.png",
+        walk = {
+            "sprites/Rafa_Sheet/andar1.png",
+            "sprites/Rafa_Sheet/andar2.png",
+            "sprites/Rafa_Sheet/andar3.png",
+            "sprites/Rafa_Sheet/andar4.png",
+            "sprites/Rafa_Sheet/andar5.png",
+            "sprites/Rafa_Sheet/andar6.png",
+            "sprites/Rafa_Sheet/andar7.png",
+            "sprites/Rafa_Sheet/andar8.png",
+        },
+        punch = {},
+    },
 }
 
 local coinFrames = {
@@ -215,6 +230,13 @@ local function playerImage(target)
     if target.abilityActive and target.character == 1 and #characterAssets.punch > 0 then
         return currentFrame(characterAssets.punch, 14)
     elseif target.moving then
+        -- Rafa usa um relógio próprio para a caminhada, evitando que a animação
+        -- dependa do tempo global do jogo e deixando os 8 quadros mais fluidos.
+        if target.character == 3 and #characterAssets.walk > 0 then
+            local fps = 12
+            local frame = math.floor((target.walkAnimationTime or 0) * fps) % #characterAssets.walk + 1
+            return characterAssets.walk[frame]
+        end
         return currentFrame(characterAssets.walk, 9)
     end
     return characterAssets.idle
@@ -636,6 +658,7 @@ local function createPlayer(character, x, y)
         facing = 1,
         moving = false,
         character = character,
+        walkAnimationTime = 0,
         abilityTimer = 0,
         abilityCooldown = 0,
         abilityActive = false,
@@ -1042,9 +1065,9 @@ function love.keypressed(key)
 
     if Game.state == "select" then
         if key == "left" or key == "a" then
-            Game.selectedCharacter = 1
+            goToPreviousCharacter()
         elseif key == "right" or key == "d" then
-            Game.selectedCharacter = 2
+            goToNextCharacter()
         elseif key == "return" or key == "space" then
             if Game.mode == "infinite" then
                 startInfiniteMode()
@@ -1252,6 +1275,13 @@ local function movePlayer(dt, target, scheme)
     local horizontal, vertical = readMovement(scheme)
     local length = math.sqrt(horizontal * horizontal + vertical * vertical)
     target.moving = length > 0
+    if target.character == 3 then
+        if target.moving then
+            target.walkAnimationTime = (target.walkAnimationTime or 0) + dt
+        else
+            target.walkAnimationTime = 0
+        end
+    end
     if math.abs(horizontal) > 0.01 then
         target.facing = horizontal
     end
@@ -1288,6 +1318,23 @@ local function repelSawFromPlayer(saw, target)
     saw.y = saw.y + (dy / length) * 18
     target.abilityActive = false
     target.abilityTimer = 0
+end
+
+-- O escudo do Rafa rebate serras sem encerrar a habilidade; assim ele protege
+-- o personagem durante toda a duração do escudo, mesmo após vários impactos.
+local function deflectSawWithMoneyShield(saw, target)
+    local playerCenterX, playerCenterY = playerCenter(target)
+    local sawCenterX = saw.x + saw.width / 2
+    local sawCenterY = saw.y + saw.height / 2
+    local dx = sawCenterX - playerCenterX
+    local dy = sawCenterY - playerCenterY
+    local length = math.max(1, math.sqrt(dx * dx + dy * dy))
+    local force = 620
+    saw.vx = (dx / length) * force
+    saw.vy = (dy / length) * force
+    saw.corner = false
+    saw.x = saw.x + (dx / length) * 24
+    saw.y = saw.y + (dy / length) * 24
 end
 
 local function eliminatePlayer(target, message)
@@ -1352,16 +1399,24 @@ local function updateBoss(dt)
             bossSawRadius(saw),
             playerHitbox()
         ) then
-            if player.alive and player.character == 1 and player.abilityActive then
-                repelSawFromPlayer(saw, player)
+            if player.alive and player.abilityActive and (player.character == 1 or player.character == 3) then
+                if player.character == 3 then
+                    deflectSawWithMoneyShield(saw, player)
+                else
+                    repelSawFromPlayer(saw, player)
+                end
             elseif player.alive and not (player.character == 2 and player.abilityActive) then
                 eliminatePlayer(player, "O jogador foi derrotado.")
             end
         elseif player2 and player2.alive and circleOverlapsRectangle(
             saw.x + saw.width / 2, saw.y + saw.height / 2, bossSawRadius(saw), playerHitbox(player2)
         ) then
-            if player2.alive and player2.character == 1 and player2.abilityActive then
-                repelSawFromPlayer(saw, player2)
+            if player2.alive and player2.abilityActive and (player2.character == 1 or player2.character == 3) then
+                if player2.character == 3 then
+                    deflectSawWithMoneyShield(saw, player2)
+                else
+                    repelSawFromPlayer(saw, player2)
+                end
             elseif player2.alive and not (player2.character == 2 and player2.abilityActive) then
                 eliminatePlayer(player2, "O jogador foi derrotado.")
             end
@@ -1448,8 +1503,12 @@ function love.update(dt)
             hitTarget = player2
         end
         if hitTarget then
-            if hitTarget.character == 1 and hitTarget.abilityActive then
-                repelSawFromPlayer(saw, hitTarget)
+            if hitTarget.abilityActive and (hitTarget.character == 1 or hitTarget.character == 3) then
+                if hitTarget.character == 3 then
+                    deflectSawWithMoneyShield(saw, hitTarget)
+                else
+                    repelSawFromPlayer(saw, hitTarget)
+                end
             elseif not (hitTarget.character == 2 and hitTarget.abilityActive) then
                 eliminatePlayer(hitTarget, "O jogador foi derrotado.")
             end
@@ -1558,7 +1617,7 @@ function love.draw()
             drawCentered("Controle: " .. Game.controllerName, 170, assets.font)
         end
         for index, character in ipairs(characters) do
-            local x = index == 1 and 350 or 850
+            local x = Game.width * index / (#characters + 1)
             local selected = index == Game.selectedCharacter
             local cardY = 205
             love.graphics.setColor(selected and 1 or 0.55, selected and 0.85 or 0.55, 0.15, 1)
@@ -1572,7 +1631,8 @@ function love.draw()
             love.graphics.printf(character.name, x - 135, 475, 270, "center")
             love.graphics.setColor(1, 1, 1, 0.65)
             love.graphics.setFont(assets.smallFont)
-            love.graphics.printf(index == 1 and "Soco" or "Intangivel", x - 125, 515, 250, "center")
+            local abilityLabel = index == 1 and "Soco" or (index == 2 and "Intangivel" or "Escudo de dinheiro")
+            love.graphics.printf(abilityLabel, x - 125, 515, 250, "center")
             love.graphics.setFont(assets.font)
         end
         love.graphics.setLineWidth(1)
@@ -1639,6 +1699,31 @@ function love.draw()
             love.graphics.draw(image, centerX, centerY, 0,
                 target.facing < 0 and -target.scale or target.scale, target.scale,
                 image:getWidth() / 2, image:getHeight() / 2)
+            if target.character == 3 and target.abilityActive then
+                -- Aura dourada e notas estilizadas: o escudo fica visível enquanto ativo.
+                local pulse = 1 + math.sin(Game.animationTime * 12) * 0.045
+                local radius = math.max(target.renderWidth, target.renderHeight) * 0.68 * pulse
+                love.graphics.setColor(1, 0.78, 0.12, 0.18)
+                love.graphics.circle("fill", centerX, centerY, radius)
+                love.graphics.setColor(1, 0.82, 0.18, 0.9)
+                love.graphics.setLineWidth(4)
+                love.graphics.circle("line", centerX, centerY, radius)
+                love.graphics.setLineWidth(1)
+                for noteIndex = 1, 6 do
+                    local angle = Game.animationTime * 2.8 + noteIndex * math.pi / 3
+                    local noteX = centerX + math.cos(angle) * radius * 0.78
+                    local noteY = centerY + math.sin(angle) * radius * 0.78
+                    love.graphics.push()
+                    love.graphics.translate(noteX, noteY)
+                    love.graphics.rotate(angle * 0.35)
+                    love.graphics.setColor(0.16, 0.68, 0.28, 1)
+                    love.graphics.rectangle("fill", -10, -6, 20, 12, 2, 2)
+                    love.graphics.setColor(1, 0.94, 0.58, 1)
+                    love.graphics.rectangle("line", -10, -6, 20, 12, 2, 2)
+                    love.graphics.printf("$", -10, -6, 20, "center")
+                    love.graphics.pop()
+                end
+            end
         end
         drawPlayer(player)
         if player2 then drawPlayer(player2) end
@@ -1671,9 +1756,14 @@ function love.draw()
             love.graphics.setColor(color[1], color[2], color[3], 1)
             love.graphics.rectangle("fill", x, 70, 150 * progress, 8)
         end
-        drawAbilityHud(player, 32, player.character == 1 and "Soco" or "Intangivel")
+        local function abilityName(character)
+            if character == 1 then return "Soco" end
+            if character == 2 then return "Intangivel" end
+            return "Escudo de dinheiro"
+        end
+        drawAbilityHud(player, 32, abilityName(player.character))
         if player2 then
-            drawAbilityHud(player2, 690, player2.character == 1 and "Soco" or "Intangivel")
+            drawAbilityHud(player2, 690, abilityName(player2.character))
         end
         if Game.state == "countdown" or Game.state == "bossCountdown" then
             love.graphics.setColor(0, 0, 0, 0.5)
