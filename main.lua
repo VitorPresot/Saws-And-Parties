@@ -75,7 +75,17 @@ local characters = {
     },
     {
         name = "Wallace",
-        idle = "sprites/sPersonagem/db27aa64-5b19-4708-b584-4683e69978ef.png",
+        idle = "sprites/wallace_directions/south.png",
+        directional = {
+            south = "sprites/wallace_directions/south.png",
+            east = "sprites/wallace_directions/east.png",
+            north = "sprites/wallace_directions/north.png",
+            west = "sprites/wallace_directions/west.png",
+            ["south-east"] = "sprites/wallace_directions/south-east.png",
+            ["north-east"] = "sprites/wallace_directions/north-east.png",
+            ["north-west"] = "sprites/wallace_directions/north-west.png",
+            ["south-west"] = "sprites/wallace_directions/south-west.png",
+        },
         walk = {
             "sprites/sPersonagemCorre/d54994e5-094f-4699-8d11-e94f29bc5d0f.png",
             "sprites/sPersonagemCorre/e082ab22-e716-4833-82eb-1427fd9dc7de.png",
@@ -229,6 +239,8 @@ local function playerImage(target)
     local characterAssets = assets.characters[target.character or Game.selectedCharacter]
     if target.abilityActive and target.character == 1 and #characterAssets.punch > 0 then
         return currentFrame(characterAssets.punch, 14)
+    elseif characterAssets.directional then
+        return characterAssets.directional[target.direction or "south"]
     elseif target.moving then
         -- Rafa usa um relógio próprio para a caminhada, evitando que a animação
         -- dependa do tempo global do jogo e deixando os 8 quadros mais fluidos.
@@ -245,20 +257,21 @@ end
 local function playerHitbox(target)
     target = target or player
     local image = playerImage(target)
+    local characterAssets = assets.characters[target.character or Game.selectedCharacter]
     local bounds = spriteBounds[image]
-    local imageWidth = image:getWidth() * player.scale
-    local imageHeight = image:getHeight() * player.scale
+    local imageWidth = image:getWidth() * target.scale
+    local imageHeight = image:getHeight() * target.scale
     local drawLeft = target.x + (target.renderWidth - imageWidth) / 2
     local drawTop = target.y + (target.renderHeight - imageHeight) / 2
     local hitboxX = bounds.x
-    if target.facing < 0 then
+    if not characterAssets.directional and target.facing < 0 then
         hitboxX = image:getWidth() - bounds.x - bounds.width
     end
     return {
-        x = drawLeft + hitboxX * player.scale,
-        y = drawTop + bounds.y * player.scale,
-        width = bounds.width * player.scale,
-        height = bounds.height * player.scale,
+        x = drawLeft + hitboxX * target.scale,
+        y = drawTop + bounds.y * target.scale,
+        width = bounds.width * target.scale,
+        height = bounds.height * target.scale,
     }
 end
 
@@ -658,6 +671,7 @@ local function createPlayer(character, x, y)
         facing = 1,
         moving = false,
         character = character,
+        direction = "south",
         walkAnimationTime = 0,
         abilityTimer = 0,
         abilityCooldown = 0,
@@ -994,6 +1008,14 @@ function love.load()
     for index, character in ipairs(characters) do
         assets.characters[index] = {
             idle = loadImage(character.idle),
+            directional = character.directional and
+                setmetatable({}, {__index = function(directions, direction)
+                    local path = character.directional[direction]
+                    if not path then return nil end
+                    local image = loadImage(path)
+                    rawset(directions, direction, image)
+                    return image
+                end}) or nil,
             walk = loadImages(character.walk),
             punch = loadImages(character.punch),
         }
@@ -1090,7 +1112,7 @@ function love.keypressed(key)
         return
     end
 
-    if (Game.state == "playing" or Game.state == "boss") and key == "space" then
+    if (Game.state == "playing" or Game.state == "boss") and (key == "space" or key == "x") then 
         activateAbility(player)
         return
     end
@@ -1225,14 +1247,22 @@ local function readMovement(scheme)
         return (love.keyboard.isDown("right") and 1 or 0) - (love.keyboard.isDown("left") and 1 or 0),
             (love.keyboard.isDown("down") and 1 or 0) - (love.keyboard.isDown("up") and 1 or 0)
     end
-    if scheme == "wasd" then
+
+    local horizontal
+    local vertical
+    if scheme == "gamepad" then
+        horizontal = (love.keyboard.isDown("d") and 1 or 0) - (love.keyboard.isDown("a") and 1 or 0)
+        vertical = (love.keyboard.isDown("s") and 1 or 0) - (love.keyboard.isDown("w") and 1 or 0)
+    elseif scheme == "wasd" then
         return (love.keyboard.isDown("d") and 1 or 0) - (love.keyboard.isDown("a") and 1 or 0),
             (love.keyboard.isDown("s") and 1 or 0) - (love.keyboard.isDown("w") and 1 or 0)
+    else
+        horizontal = (love.keyboard.isDown("right", "d") and 1 or 0)
+            - (love.keyboard.isDown("left", "a") and 1 or 0)
+        vertical = (love.keyboard.isDown("down", "s") and 1 or 0)
+            - (love.keyboard.isDown("up", "w") and 1 or 0)
     end
-    local horizontal = (love.keyboard.isDown("right", "d") and 1 or 0)
-        - (love.keyboard.isDown("left", "a") and 1 or 0)
-    local vertical = (love.keyboard.isDown("down", "s") and 1 or 0)
-        - (love.keyboard.isDown("up", "w") and 1 or 0)
+
     local gamepadHorizontal = gamepadAxis("leftx")
     local gamepadVertical = gamepadAxis("lefty")
     if gamepad then
@@ -1275,6 +1305,20 @@ local function movePlayer(dt, target, scheme)
     local horizontal, vertical = readMovement(scheme)
     local length = math.sqrt(horizontal * horizontal + vertical * vertical)
     target.moving = length > 0
+    if assets.characters[target.character].directional and target.moving then
+        local diagonal = math.abs(horizontal) > 0.35 and math.abs(vertical) > 0.35
+        if diagonal then
+            if vertical < 0 then
+                target.direction = horizontal < 0 and "north-west" or "north-east"
+            else
+                target.direction = horizontal < 0 and "south-west" or "south-east"
+            end
+        elseif math.abs(vertical) > math.abs(horizontal) then
+            target.direction = vertical < 0 and "north" or "south"
+        else
+            target.direction = horizontal < 0 and "west" or "east"
+        end
+    end
     if target.character == 3 then
         if target.moving then
             target.walkAnimationTime = (target.walkAnimationTime or 0) + dt
@@ -1376,7 +1420,7 @@ end
 local function updateBoss(dt)
     Game.bossTime = Game.bossTime - dt
     bossSpawnTimer = bossSpawnTimer - dt
-    movePlayer(dt, player, "coop" == Game.mode and "wasd" or nil)
+    movePlayer(dt, player, "coop" == Game.mode and "gamepad" or nil)
     if player2 then
         movePlayer(dt, player2, "arrows")
     end
@@ -1491,7 +1535,7 @@ function love.update(dt)
         return
     end
 
-    movePlayer(dt, player, Game.mode == "coop" and "wasd" or nil)
+    movePlayer(dt, player, Game.mode == "coop" and "gamepad" or nil)
     if player2 then
         movePlayer(dt, player2, "arrows")
     end
@@ -1697,7 +1741,8 @@ function love.draw()
             local alpha = target.alive and (target.character == 2 and target.abilityActive and 0.42 or 1) or 0.18
             love.graphics.setColor(1, 1, 1, alpha)
             love.graphics.draw(image, centerX, centerY, 0,
-                target.facing < 0 and -target.scale or target.scale, target.scale,
+                assets.characters[target.character].directional and target.scale
+                    or (target.facing < 0 and -target.scale or target.scale), target.scale,
                 image:getWidth() / 2, image:getHeight() / 2)
             if target.character == 3 and target.abilityActive then
                 -- Aura dourada e notas estilizadas: o escudo fica visível enquanto ativo.

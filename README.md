@@ -58,8 +58,9 @@ As fases alternam entre as músicas `Final_Quarter_Dash.mp3` e
 `Frame_Perfect.mp3`, ambas reproduzidas em loop.
 
 O menu de jogo oferece os modos História, Infinito e 2 Jogadores. No modo
-cooperativo, o jogador 1 usa WASD e `Espaço`, enquanto o jogador 2 usa as
-setas e `V` para a habilidade.
+cooperativo, o jogador 1 usa o analógico esquerdo/D-pad do controle, com WASD
+e `Espaço` como fallback, enquanto o jogador 2 usa as setas e `V` para a
+habilidade. Os botões `X` ou `Y` do controle ativam a habilidade do jogador 1.
 
 Algumas fases também possuem serras de perímetro: elas ficam junto às paredes
 e percorrem continuamente o contorno retangular da pista.
