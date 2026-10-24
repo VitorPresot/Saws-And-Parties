@@ -109,6 +109,17 @@ local characters = {
         },
         punch = {},
     },
+    {
+        name = "Luiz",
+        idle = "sprites/Luiz_Sheet/Luiz_Andar1.png",
+        walk = {
+            "sprites/Luiz_Sheet/Luiz_Andar1.png",
+            "sprites/Luiz_Sheet/Luiz_Andar2.png",
+            "sprites/Luiz_Sheet/Luiz_Andar3.png",
+            "sprites/Luiz_Sheet/Luiz_Andar4.png",
+        },
+        punch = {},
+    },
 }
 
 local coinFrames = {
@@ -311,7 +322,7 @@ local function playerCenter(target)
 end
 
 local function activateAbility(target)
-    if not target or target.abilityTimer > 0 or target.abilityCooldown > 0 then
+    if not target or target.character == 4 or target.abilityTimer > 0 or target.abilityCooldown > 0 then
         return
     end
     target.abilityTimer = target.character == 1 and 0.5 or 1.5
@@ -1675,7 +1686,9 @@ function love.draw()
             love.graphics.printf(character.name, x - 135, 475, 270, "center")
             love.graphics.setColor(1, 1, 1, 0.65)
             love.graphics.setFont(assets.smallFont)
-            local abilityLabel = index == 1 and "Soco" or (index == 2 and "Intangivel" or "Escudo de dinheiro")
+            local abilityLabel = index == 1 and "Soco"
+                or (index == 2 and "Intangivel"
+                or (index == 3 and "Escudo de dinheiro" or "Sem habilidade"))
             love.graphics.printf(abilityLabel, x - 125, 515, 250, "center")
             love.graphics.setFont(assets.font)
         end
@@ -1804,7 +1817,8 @@ function love.draw()
         local function abilityName(character)
             if character == 1 then return "Soco" end
             if character == 2 then return "Intangivel" end
-            return "Escudo de dinheiro"
+            if character == 3 then return "Escudo de dinheiro" end
+            return "Sem habilidade"
         end
         drawAbilityHud(player, 32, abilityName(player.character))
         if player2 then
