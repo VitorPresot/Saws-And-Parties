@@ -55,23 +55,70 @@ local CREDITS = {
 local characters = {
     {
         name = "Bruno",
-        idle = "sprites/bruno_sheet/walk_01.png",
-        walk = {
-            "sprites/bruno_sheet/walk_01.png",
-            "sprites/bruno_sheet/walk_02.png",
-            "sprites/bruno_sheet/walk_03.png",
-            "sprites/bruno_sheet/walk_04.png",
-            "sprites/bruno_sheet/walk_05.png",
-            "sprites/bruno_sheet/walk_06.png",
+        idle = "sprites/Idle/rotations/south.png",
+        directional = {
+            south = "sprites/Idle/rotations/south.png",
+            east = "sprites/Idle/rotations/east.png",
+            north = "sprites/Idle/rotations/north.png",
+            west = "sprites/Idle/rotations/west.png",
+            ["south-east"] = "sprites/Idle/rotations/south-east.png",
+            ["north-east"] = "sprites/Idle/rotations/north-east.png",
+            ["north-west"] = "sprites/Idle/rotations/north-west.png",
+            ["south-west"] = "sprites/Idle/rotations/south-west.png",
         },
-        punch = {
-            "sprites/bruno_sheet/punch_01.png",
-            "sprites/bruno_sheet/punch_02.png",
-            "sprites/bruno_sheet/punch_03.png",
-            "sprites/bruno_sheet/punch_04.png",
-            "sprites/bruno_sheet/punch_05.png",
-            "sprites/bruno_sheet/punch_06.png",
+        punchDirectional = {
+            east = {
+                "sprites/Bruno/punch/east/01.png",
+                "sprites/Bruno/punch/east/02.png",
+                "sprites/Bruno/punch/east/03.png",
+                "sprites/Bruno/punch/east/04.png",
+                "sprites/Bruno/punch/east/05.png",
+            },
+            north = {
+                "sprites/Bruno/punch/north/01.png",
+                "sprites/Bruno/punch/north/02.png",
+                "sprites/Bruno/punch/north/03.png",
+                "sprites/Bruno/punch/north/04.png",
+                "sprites/Bruno/punch/north/05.png",
+            },
+            ["north-east"] = {
+                "sprites/Bruno/punch/north-east/01.png",
+                "sprites/Bruno/punch/north-east/02.png",
+                "sprites/Bruno/punch/north-east/03.png",
+                "sprites/Bruno/punch/north-east/04.png",
+                "sprites/Bruno/punch/north-east/05.png",
+            },
+            ["north-west"] = {
+                "sprites/Bruno/punch/north-west/01.png",
+                "sprites/Bruno/punch/north-west/02.png",
+                "sprites/Bruno/punch/north-west/03.png",
+                "sprites/Bruno/punch/north-west/04.png",
+                "sprites/Bruno/punch/north-west/05.png",
+            },
+            south = {
+                "sprites/Bruno/punch/south/01.png",
+                "sprites/Bruno/punch/south/02.png",
+                "sprites/Bruno/punch/south/03.png",
+                "sprites/Bruno/punch/south/04.png",
+                "sprites/Bruno/punch/south/05.png",
+            },
+            ["south-east"] = {
+                "sprites/Bruno/punch/south-east/01.png",
+                "sprites/Bruno/punch/south-east/02.png",
+                "sprites/Bruno/punch/south-east/03.png",
+                "sprites/Bruno/punch/south-east/04.png",
+                "sprites/Bruno/punch/south-east/05.png",
+            },
+            west = {
+                "sprites/Bruno/punch/west/01.png",
+                "sprites/Bruno/punch/west/02.png",
+                "sprites/Bruno/punch/west/03.png",
+                "sprites/Bruno/punch/west/04.png",
+                "sprites/Bruno/punch/west/05.png",
+            },
         },
+        walk = {},
+        punch = {},
     },
     {
         name = "Wallace",
@@ -129,6 +176,7 @@ local function loadImage(path)
                 maxX = math.max(maxX, x)
                 maxY = math.max(maxY, y)
             end
+
         end
     end
 
@@ -148,6 +196,19 @@ local function loadImages(paths)
     local images = {}
     for index, path in ipairs(paths) do
         images[index] = loadImage(path)
+    end
+    return images
+end
+
+local function loadDirectionalImages(paths)
+    if not paths then
+        return nil
+    end
+    local images = {}
+    for direction, directionPaths in pairs(paths) do
+        images[direction] = type(directionPaths) == "table"
+            and loadImages(directionPaths)
+            or loadImage(directionPaths)
     end
     return images
 end
@@ -222,9 +283,18 @@ end
 local function playerImage(target)
     target = target or player
     local characterAssets = assets.characters[target.character or Game.selectedCharacter]
-    if target.abilityActive and target.character == 1 and #characterAssets.punch > 0 then
-        return currentFrame(characterAssets.punch, 14)
-    elseif characterAssets.directional then
+    if target.abilityActive and target.character == 1 then
+        local punchFrames = characterAssets.punchDirectional
+            and characterAssets.punchDirectional[target.direction or "south"]
+        if punchFrames then
+            return currentFrame(punchFrames, 14)
+        elseif characterAssets.directional and characterAssets.punchDirectional then
+            return currentFrame(characterAssets.punchDirectional.south, 14)
+        elseif #characterAssets.punch > 0 then
+            return currentFrame(characterAssets.punch, 14)
+        end
+    end
+    if characterAssets.directional then
         return characterAssets.directional[target.direction or "south"]
     elseif target.moving then
         return currentFrame(characterAssets.walk, 9)
@@ -636,6 +706,16 @@ local function createPlayer(character, x, y)
         renderWidth = math.max(renderWidth, image:getWidth())
         renderHeight = math.max(renderHeight, image:getHeight())
     end
+    for _, image in pairs(characterAssets.directional or {}) do
+        renderWidth = math.max(renderWidth, image:getWidth())
+        renderHeight = math.max(renderHeight, image:getHeight())
+    end
+    for _, frames in pairs(characterAssets.punchDirectional or {}) do
+        for _, image in ipairs(frames) do
+            renderWidth = math.max(renderWidth, image:getWidth())
+            renderHeight = math.max(renderHeight, image:getHeight())
+        end
+    end
     renderWidth = renderWidth * spriteScale
     renderHeight = renderHeight * spriteScale
     return {
@@ -856,13 +936,8 @@ function love.load()
         assets.characters[index] = {
             idle = loadImage(character.idle),
             directional = character.directional and
-                setmetatable({}, {__index = function(directions, direction)
-                    local path = character.directional[direction]
-                    if not path then return nil end
-                    local image = loadImage(path)
-                    rawset(directions, direction, image)
-                    return image
-                end}) or nil,
+                loadDirectionalImages(character.directional) or nil,
+            punchDirectional = loadDirectionalImages(character.punchDirectional),
             walk = loadImages(character.walk),
             punch = loadImages(character.punch),
         }
@@ -1166,7 +1241,7 @@ local function movePlayer(dt, target, scheme)
             target.direction = horizontal < 0 and "west" or "east"
         end
     end
-    if math.abs(horizontal) > 0.01 then
+if math.abs(horizontal) > 0.01 then
         target.facing = horizontal
     end
     local speed = 235
