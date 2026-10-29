@@ -62,6 +62,9 @@ cooperativo, o jogador 1 usa o analógico esquerdo/D-pad do controle, com WASD
 e `Espaço` como fallback, enquanto o jogador 2 usa as setas e `V` para a
 habilidade. Os botões `X` ou `Y` do controle ativam a habilidade do jogador 1.
 
+Algumas fases também possuem serras de perímetro: elas ficam junto às paredes
+e percorrem continuamente o contorno retangular da pista.
+
 O menu possui opções para ligar/desligar música, alternar tela cheia e ver os
 créditos. A música `High_Score_Serenade.mp3` toca em loop no menu.
 
